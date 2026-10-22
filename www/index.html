@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#182a45">
+<meta name="description" content="Multi-profile shift dashboard for a shared Android device.">
+
+
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Shift Dashboard">
+<title>Shift Dashboard — Profiles</title>
+<style>
+
+:root{color-scheme:light;--ink:#17233b;--muted:#6b7890;--line:#e3e8ef;--blue:#4559d8;--green:#12815d;--bg:#f3f6fa}
+*{box-sizing:border-box}body{margin:0;padding:14px;background:var(--bg);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink)}
+main{max-width:540px;margin:0 auto}.hero{background:linear-gradient(135deg,#172744,#344f81);color:white;padding:22px;border-radius:20px;box-shadow:0 8px 24px #17274420}
+.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.12em;opacity:.78}.hero h1{font-size:25px;line-height:1.2;margin:8px 0}.hero p{margin:5px 0;color:#e1e8f5;font-size:14px}
+.pill{display:inline-block;background:#ffffff20;border:1px solid #ffffff30;border-radius:999px;padding:6px 10px;font-size:12px;margin-top:9px}
+.card{background:white;border:1px solid var(--line);border-radius:16px;padding:17px;margin-top:13px;box-shadow:0 3px 12px #162b4608}
+h2{font-size:16px;margin:0 0 13px}h3{font-size:13px;color:var(--muted);margin:0 0 7px;font-weight:650}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.metric{padding:13px;border-radius:12px;background:#f6f8fb;min-width:0}.metric .value{font-size:22px;font-weight:750;letter-spacing:-.03em;overflow-wrap:anywhere}.metric .small{font-size:12px;color:var(--muted);margin-top:3px}
+.timezone-select{width:100%;padding:12px;border:1px solid #d9e0ea;border-radius:10px;background:#fff;color:var(--ink);font:inherit;margin:5px 0 10px}.zone{border:1px solid var(--line);border-radius:12px;padding:13px;margin-top:9px;display:flex;align-items:center;justify-content:space-between;gap:12px}.zone .place{font-weight:700}.zone .zoneclock{font-size:22px;font-weight:750;font-variant-numeric:tabular-nums}.zone .offset{font-size:12px;color:var(--muted)}
+.rows{display:grid;gap:9px}.rowitem{display:flex;justify-content:space-between;gap:12px;font-size:14px;line-height:1.4}.rowitem .k{color:var(--muted)}.rowitem .v{text-align:right;font-weight:600;overflow-wrap:anywhere}
+.address{padding:13px;background:#f6f8fb;border:1px solid var(--line);border-radius:11px;font-size:16px;line-height:1.5;overflow-wrap:anywhere;user-select:text;-webkit-user-select:text}
+button{width:100%;border:0;border-radius:11px;background:var(--blue);color:white;font-weight:700;font-size:15px;padding:14px;margin-top:10px;cursor:pointer}
+#copyStatus{min-height:18px;color:var(--green);font-size:13px;margin-top:7px}
+.schedule{display:grid;gap:8px}.day{display:flex;justify-content:space-between;gap:10px;padding:11px;border:1px solid var(--line);border-radius:10px;font-size:13px}.day strong{display:block}.day span{color:var(--muted);text-align:right}
+.note{font-size:12px;line-height:1.5;color:var(--muted);margin:11px 0 0}.footer{text-align:center;color:var(--muted);font-size:11px;padding:16px}
+.confirmation{display:none;margin-top:14px;padding:15px;border:1px solid #f1c9a8;background:#fff8f2;border-radius:13px}.confirmation.show{display:block}.confirmation h3{font-size:15px;color:var(--ink);margin:0 0 6px}.confirmation p{font-size:13px;line-height:1.45;color:var(--muted);margin:0 0 12px}.swipe-track{position:relative;height:56px;border-radius:999px;background:#ffede3;color:#c84c1c;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:750;overflow:hidden;touch-action:pan-y;user-select:none}.swipe-track .swipe-label{pointer-events:none;padding:0 52px;text-align:center}.swipe-knob{position:absolute;left:4px;top:4px;width:48px;height:48px;border-radius:50%;background:#f15b2a;color:white;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 2px 6px #0002;cursor:grab;touch-action:none}.swipe-track.done{background:#e7f8ef;color:#13764b}.swipe-track.done .swipe-knob{background:#159764}.confirm-status{font-size:13px;font-weight:650;margin-top:9px;color:var(--green);min-height:18px}
+@media(min-width:430px){.zone{padding:15px}.zone .zoneclock{font-size:24px}}
+
+.shell{max-width:620px;margin:0 auto;padding:14px 14px 32px}
+.appbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.brand{font-weight:850;font-size:18px;color:#17233b}
+.app-actions{display:flex;gap:8px;flex-wrap:wrap}
+.smallbtn{width:auto;padding:10px 12px;margin:0;font-size:13px}
+.panel{background:#fff;border:1px solid #e3e8ef;border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 3px 14px #1727440a}
+.panel h2{font-size:18px;margin:0 0 12px}
+.panel p{font-size:13px;line-height:1.5;color:#6b7890}
+.profile-list{display:grid;gap:8px}
+.profile-choice{display:flex;align-items:center;gap:12px;text-align:left;background:#f6f8fc;color:#17233b;border:1px solid #e3e8ef;padding:12px;border-radius:12px;cursor:pointer;width:100%;margin:0}
+.profile-choice.active{border-color:#4559d8;background:#eef0ff}
+.avatar{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:#dce8ff;color:#234ea0;font-weight:800;flex-shrink:0}
+.profile-meta{flex:1;min-width:0}
+.profile-meta strong{display:block;font-size:14px}
+.profile-meta span{display:block;font-size:12px;color:#6b7890;margin-top:3px}
+.fieldgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}
+.field label{font-size:12px;font-weight:750;color:#4c5870}
+.field input,.field select,.field textarea{width:100%;padding:11px;border:1px solid #d9e0ea;border-radius:9px;font:inherit;font-size:14px;background:white;color:#17233b}
+.field textarea{min-height:70px;resize:vertical}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap}
+.btnrow button{flex:1}
+button.secondary{background:#56657b}
+button.danger{background:#b42318}
+.notice{font-size:12px;padding:10px;border-radius:9px;background:#eef5ff;color:#234ea0;margin-top:8px;line-height:1.5}
+.hidden{display:none!important}
+.profile-view{margin-top:12px}
+details summary{cursor:pointer;font-weight:750}
+@media(max-width:420px){.fieldgrid{grid-template-columns:1fr}.shell{padding:10px}}
+</style>
+<script type="module" src="./boot.js"></script>
+</head>
+<body>
+<div id="pinGate" style="position:fixed;inset:0;z-index:99999;background:#f3f6fa;display:flex;align-items:center;justify-content:center;padding:22px;font-family:system-ui,sans-serif">
+ <div style="width:100%;max-width:380px;background:#fff;border:1px solid #e3e8ef;border-radius:20px;padding:24px;box-shadow:0 12px 40px #17274420">
+  <div style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#66738a">DKASU • PRIVATE DEVICE</div>
+  <h1 id="pinTitle" style="font-size:25px;margin:10px 0 6px;color:#17233b">Unlock shift dashboard</h1>
+  <p id="pinHelp" style="color:#66738a;line-height:1.5;margin:0 0 14px">Enter your app PIN to continue.</p>
+  <input id="pinInput" inputmode="numeric" autocomplete="current-password" type="password" maxlength="12" placeholder="4–12 digit PIN" style="width:100%;box-sizing:border-box;padding:14px;border:1px solid #d9e0ea;border-radius:11px;font:inherit">
+  <input id="pinConfirm" inputmode="numeric" autocomplete="new-password" type="password" maxlength="12" placeholder="Confirm PIN" style="display:none;width:100%;box-sizing:border-box;padding:14px;border:1px solid #d9e0ea;border-radius:11px;font:inherit;margin-top:9px">
+  <button id="pinSubmit" type="button" style="width:100%;padding:14px;margin-top:12px;border:0;border-radius:11px;background:#4559d8;color:white;font-weight:700;font-size:15px">Unlock</button>
+  <p id="pinError" role="status" style="min-height:18px;color:#b42318;font-size:13px;margin:10px 0 0"></p>
+  <p style="font-size:11px;color:#66738a;line-height:1.45;margin-top:12px">Worker data is stored on this device. Keep a separate backup. The PIN screen is a local app lock, not an Ogram login.</p>
+ </div>
+</div>
+<div id="appRoot" style="display:none">
+<div class="shell">
+  <div class="appbar">
+    <div class="brand">DKASU · Shift Dashboard</div>
+    <div class="app-actions">
+      <button class="smallbtn secondary" id="profilesTopButton" type="button">Profiles</button>
+      <button class="smallbtn" id="addTopButton" type="button">+ Add</button>
+    </div>
+  </div>
+
+  <section class="panel" id="profilePicker">
+    <h2>Choose your profile</h2>
+    <p>Select your account to open its shift dashboard. Each profile has separate settings, schedules, and confirmations stored on this device.</p>
+    <div class="profile-list" id="profileList"></div>
+    <div class="btnrow" style="margin-top:10px">
+      <button id="addProfileButton" type="button">+ Add profile</button>
+      <button id="backupButton" class="secondary" type="button">Backup / Restore</button>
+    </div>
+    <div class="notice">This is a local shift dashboard. It does not sign in to Ogram or submit attendance.</div>
+  </section>
+
+  <section class="panel hidden" id="profileEditor">
+    <h2 id="editorTitle">Add profile</h2>
+    <div class="fieldgrid">
+      <div class="field"><label for="pName">Full name *</label><input id="pName" required maxlength="100" placeholder="Worker name"></div>
+      <div class="field"><label for="pEmail">Account email</label><input id="pEmail" maxlength="150" type="email" placeholder="worker@example.com"></div>
+      <div class="field"><label for="pProfileId">Profile ID</label><input id="pProfileId" maxlength="80" placeholder="Ogram profile ID"></div>
+      <div class="field"><label for="pSwipeId">Swipe ID</label><input id="pSwipeId" maxlength="80" placeholder="Swipe ID"></div>
+      <div class="field"><label for="pJob">Job title</label><input id="pJob" maxlength="100" placeholder="Warehouse Operator"></div>
+      <div class="field"><label for="pCompany">Company</label><input id="pCompany" maxlength="150" placeholder="Company name"></div>
+      <div class="field"><label for="pLocation">Work location label</label><input id="pLocation" maxlength="180" placeholder="Warehouse / branch"></div>
+      <div class="field"><label for="pAddress">Copyable work address *</label><input id="pAddress" maxlength="250" placeholder="Full address"></div>
+      <div class="field"><label for="pContractStart">Contract start date</label><input id="pContractStart" type="date"></div>
+      <div class="field"><label for="pContractEnd">Contract end date</label><input id="pContractEnd" type="date"></div>
+      <div class="field"><label for="pTimezone">Preferred display time zone</label><select id="pTimezone"><option value="Asia/Dubai">Dubai</option><option value="Africa/Kampala">Uganda</option><option value="Europe/Rome">Italy / Europe</option></select></div>
+      <div class="field"><label for="pShiftZone">Schedule time zone</label><select id="pShiftZone"><option value="Asia/Dubai">Dubai</option><option value="Africa/Kampala">Uganda</option><option value="Europe/Rome">Italy / Europe</option></select></div>
+    </div>
+    <div class="field">
+      <label>Shift schedules (one per line: YYYY-MM-DD,HH:MM,HH:MM)</label>
+      <textarea id="pSchedules" placeholder="2026-10-23,06:00,16:00&#10;2026-10-24,06:00,16:00"></textarea>
+    </div>
+    <div class="notice">Use the schedule time zone above for all shift times. Example: 2026-10-23,06:00,16:00. Leave dates blank if unknown; the app will not invent a shift.</div>
+    <div class="btnrow">
+      <button id="saveProfileButton" type="button">Save profile</button>
+      <button id="cancelEditorButton" class="secondary" type="button">Cancel</button>
+    </div>
+  </section>
+
+  <section class="panel hidden" id="backupPanel">
+    <h2>Backup and restore</h2>
+    <p>Export all worker profiles, schedules, time-zone settings and local self-confirmations to a JSON backup. Keep it private.</p>
+    <div class="btnrow">
+      <button id="exportBackupButton" type="button">Export backup</button>
+      <button id="importBackupButton" class="secondary" type="button">Restore backup</button>
+      <input id="backupFileInput" type="file" accept=".json,application/json" class="hidden">
+    </div>
+    <div class="notice" id="backupStatus" role="status" aria-live="polite">Backup data stays on this device unless you export it.</div>
+    <button id="backFromBackupButton" class="secondary" type="button">Back to profiles</button>
+  </section>
+
+  <section class="panel hidden" id="activeProfilePanel">
+    <div class="btnrow" style="margin-bottom:12px">
+      <button id="switchProfileButton" class="secondary" type="button">← Switch profile</button>
+      <button id="editActiveButton" type="button">Edit profile</button>
+      <button id="deleteActiveButton" class="danger" type="button">Delete profile</button>
+    </div>
+    <div id="activeProfileView" class="profile-view"></div>
+  </section>
+
+  <section class="panel" id="storagePanel">
+    <h2>Device storage</h2>
+    <p id="storageStatus">Checking local storage…</p>
+    <p>Data is saved separately by profile in this browser/app installation. Clearing browser storage or uninstalling the app may erase it. Export backups regularly.</p>
+  </section>
+  <div class="footer">Local dashboard only · Not connected to Ogram</div>
+</div>
+
+<template id="dashboardTemplate">
+
+<header class="hero">
+<div class="eyebrow">Ogram · Live shift dashboard</div>
+<h1>Andrew Wamani</h1>
+<p>Warehouse Operator · Transcorp International Logistics</p>
+<p>Profile ID: <strong>ID432384</strong> · Swipe ID shown in attendance screen: <strong>ID55911</strong></p>
+<div class="pill">Contract: 15 Oct – 15 Dec 2026</div>
+</header>
+
+<section class="card">
+<h2>Choose your dashboard time zone</h2>
+<p class="note" style="margin-top:0">Choose how times are displayed. Shift times are based on the Dubai schedule and converted to your selected time zone. The three clocks below will still show all locations.</p>
+<label for="primaryTimezone" style="display:block;font-size:13px;font-weight:700;margin:10px 0 5px">Dashboard / swipe time zone</label>
+<select id="primaryTimezone" class="timezone-select">
+<option value="Asia/Dubai">🇦🇪 Dubai (UTC+4)</option>
+<option value="Africa/Kampala">🇺🇬 Uganda (UTC+3)</option>
+<option value="Europe/Rome">🇮🇹 Italy / Europe (seasonal time)</option>
+</select>
+<div class="pill" id="timezoneSelected" style="background:#eef0ff;color:#4559d8;border-color:#d9ddff">Dashboard uses Dubai time</div>
+</section>
+
+<section class="card">
+<h2>Live contract countdown</h2>
+<div class="grid">
+<div class="metric"><h3>Days remaining</h3><div class="value" id="daysRemaining">—</div><div class="small" id="contractStatus">Calculating…</div></div>
+<div class="metric"><h3>Contract progress</h3><div class="value" id="progress">—</div><div class="small">Elapsed portion</div></div>
+</div>
+<p class="note" id="contractDates"></p>
+</section>
+
+<section class="card">
+<h2>Current local time</h2>
+<div class="zone"><div><div class="place">🇺🇬 Uganda</div><div class="offset">Africa/Kampala · UTC+3</div></div><div class="zoneclock" id="clockUganda">--:--:--</div></div>
+<div class="zone"><div><div class="place">🇦🇪 Dubai</div><div class="offset">Asia/Dubai · UTC+4</div></div><div class="zoneclock" id="clockDubai">--:--:--</div></div>
+<div class="zone"><div><div class="place">🇮🇹 Italy / Europe</div><div class="offset">Europe/Rome · seasonal time</div></div><div class="zoneclock" id="clockItaly">--:--:--</div></div>
+<p class="note">Clocks use each location’s time-zone database, so Italy’s daylight-saving changes are handled automatically.</p>
+</section>
+
+<section class="card">
+<h2>Shift status · selected contract date</h2>
+<div class="grid">
+<div class="metric"><h3 id="shiftHoursTitle">Shift hours (Dubai)</h3><div class="value">06:00–16:00</div><div class="small">As shown in schedule</div></div>
+<div class="metric"><h3>Shift countdown</h3><div class="value" id="shiftCountdown">—</div><div class="small" id="shiftStatus">Calculating…</div></div>
+</div>
+<p class="note">The screenshots show 06:00 AM–04:00 PM Dubai time for Oct 15–19 and Oct 22 only. These times are converted when you change the display time zone. For other dates, verify the shift in Ogram.</p>
+</section>
+
+<section class="card">
+<h2>Daily schedule from screenshots</h2>
+<div class="schedule">
+<div class="day"><div><strong>15–19 Oct 2026</strong>Thu–Mon</div><span>06:00 AM – 04:00 PM</span></div>
+<div class="day"><div><strong>22 Oct 2026</strong>Thu · attendance screen</div><span>06:00 AM – 04:00 PM</span></div>
+</div>
+<label for="shiftDate" style="display:block;font-size:13px;font-weight:700;margin:15px 0 7px">Check a contract date</label>
+<input id="shiftDate" type="date" min="2026-10-15" max="2026-12-15" value="2026-10-22" style="width:100%;padding:12px;border:1px solid #d9e0ea;border-radius:10px;font:inherit">
+<p class="note" id="selectedDateNote">Select a date to see the schedule when it is confirmed by the screenshots. Other dates require verification in Ogram.</p>
+</section>
+
+<section class="card">
+<h2>Account details</h2>
+<div class="rows">
+<div class="rowitem"><span class="k">Account email</span><span class="v">wamaniandrew26@gmail.com</span></div>
+<div class="rowitem"><span class="k">Name</span><span class="v">Andrew Wamani</span></div>
+<div class="rowitem"><span class="k">Profile ID</span><span class="v">ID432384</span></div>
+<div class="rowitem"><span class="k">Job</span><span class="v">Warehouse Operator</span></div>
+<div class="rowitem"><span class="k">Company</span><span class="v">Transcorp International Logistics</span></div>
+<div class="rowitem"><span class="k">Work location</span><span class="v">UAEW Warehouse – DIP 2</span></div>
+</div>
+</section>
+
+<section class="card">
+<h2>Copyable work address</h2>
+<div class="address" id="address">Dubai Festival City Mall - Crescent Rd - Dubai</div>
+<button id="copyAddress" type="button">Copy address</button><div id="copyStatus" role="status" aria-live="polite"></div>
+<p class="note">If copying is blocked, open the installed dashboard or open this page in Chrome on Android and press and hold the address to select and copy it.</p>
+<div class="confirmation" id="endShiftConfirmation" aria-live="polite">
+  <h3>Have you finished your shift?</h3>
+  <p>Only swipe if you have actually finished work. This records your confirmation in this HTML page only; it does not submit attendance to Ogram.</p>
+  <div class="swipe-track" id="swipeTrack" role="group" aria-label="Swipe to confirm shift finished">
+    <span class="swipe-label" id="swipeLabel">Swipe to confirm finished</span>
+    <span class="swipe-knob" id="swipeKnob" aria-hidden="true">›</span>
+  </div>
+  <div class="confirm-status" id="endShiftStatus" role="status"></div>
+</div>
+</section>
+
+
+
+
+</template>
+
+
+</div>
+</body>
+</html>

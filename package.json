@@ -1,0 +1,22 @@
+{
+  "name": "dkasu-native-multi-profile-shift-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "DKASU multi-profile shift dashboard with on-device SQLite and PIN lock",
+  "scripts": {
+    "build": "vite build",
+    "android:add": "cap add android",
+    "android:sync": "cap sync android",
+    "android:open": "cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.4.3",
+    "@capacitor/core": "^7.4.3",
+    "@capacitor/preferences": "^7.0.2",
+    "@capacitor-community/sqlite": "^7.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.4.3",
+    "vite": "^6.4.1"
+  }
+}
