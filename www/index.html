@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Shift Dashboard">
-<title>Shift Dashboard — Profiles</title>
+<meta name="apple-mobile-web-app-title" content="DKASU OS">
+<title>DKASU OS · Shift Dashboard</title>
 <style>
 :root{color-scheme:light;--ink:#17233b;--muted:#6b7890;--line:#e3e8ef;--blue:#4559d8;--green:#12815d;--bg:#f3f6fa;--danger:#b42318}
 *{box-sizing:border-box}body{margin:0;padding:calc(14px + env(safe-area-inset-top,0px)) calc(14px + env(safe-area-inset-right,0px)) calc(14px + env(safe-area-inset-bottom,0px)) calc(14px + env(safe-area-inset-left,0px));background:var(--bg);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);overflow-x:hidden}
@@ -68,7 +68,7 @@ details summary{cursor:pointer;font-weight:750}
 .pin-note{font-size:11px;color:#66738a;line-height:1.45;margin-top:12px}
 .worker-auth-gate{position:fixed;inset:0;z-index:99998;background:#f3f6fa;display:none;align-items:center;justify-content:center;padding:22px;font-family:system-ui,sans-serif;overflow:auto}
 .worker-auth-card{width:100%;max-width:420px;background:#fff;border:1px solid #e3e8ef;border-radius:20px;padding:24px;box-shadow:0 12px 40px #17274420}
-.worker-auth-card h1{font-size:24px;margin:9px 0;color:#17233b}.worker-auth-card p{color:#66738a;line-height:1.5}.worker-auth-card input{width:100%;box-sizing:border-box;padding:13px;border:1px solid #d9e0ea;border-radius:10px;font:inherit;margin:6px 0}
+.worker-auth-card h1{font-size:24px;margin:9px 0;color:#17233b}.worker-auth-card p{color:#66738a;line-height:1.5}.worker-auth-card input{width:100%;box-sizing:border-box;padding:13px;border:1px solid #d9e0ea;border-radius:10px;font:inherit;margin:6px 0}.dkasu-login-logo{display:block;width:min(220px,72%);height:auto;margin:0 auto 14px}
 .worker-auth-card #workerAuthMessage{margin:8px 0 14px}.worker-registration-choice{display:grid;gap:5px;margin-top:16px;padding-top:14px;border-top:1px solid #e3e8ef}.worker-registration-choice p{margin:0;font-size:13px;font-weight:700}.worker-auth-card .worker-registration-choice button{margin-top:4px}.worker-auth-card #workerRegisterIntro{margin-top:12px}.worker-auth-card #workerActivationForm{margin-top:14px}.worker-auth-card #workerActivationForm label{display:block;font-size:13px;font-weight:700;color:#344054}.worker-backup-details{margin-top:16px;padding-top:12px;border-top:1px solid #e3e8ef}.worker-backup-details summary{font-size:12px;color:#66738a}.worker-backup-details button{margin-top:4px}
 .pin-submit{width:100%;padding:14px;margin-top:12px;border:0;border-radius:11px;background:var(--blue);color:white;font-weight:700;font-size:15px}
 .security-toggle{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px;margin:16px 0;border:1px solid #d9e0ea;border-radius:12px;background:#fbfcfe}.security-toggle span{display:grid;gap:4px}.security-toggle strong{font-size:14px}.security-toggle small{color:#66738a;line-height:1.4}.security-toggle input{width:22px;height:22px;flex:none;accent-color:var(--blue)}#biometricUnlockStatus{min-height:20px}
@@ -79,7 +79,7 @@ details summary{cursor:pointer;font-weight:750}
 <body>
 <div id="pinGate" style="position:fixed;inset:0;z-index:99999;background:#f3f6fa;display:flex;align-items:center;justify-content:center;padding:calc(22px + env(safe-area-inset-top,0px)) calc(22px + env(safe-area-inset-right,0px)) calc(22px + env(safe-area-inset-bottom,0px)) calc(22px + env(safe-area-inset-left,0px));font-family:system-ui,sans-serif;overflow:auto">
  <div style="width:100%;max-width:380px;background:#fff;border:1px solid #e3e8ef;border-radius:20px;padding:24px;box-shadow:0 12px 40px #17274420">
-  <div style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#66738a">DKASU • PRIVATE DEVICE</div>
+  <div style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#66738a">DKASU OS • PRIVATE DEVICE</div>
   <h1 id="pinTitle" style="font-size:25px;margin:10px 0 6px;color:#17233b">Unlock shift dashboard</h1>
   <p id="pinHelp" style="color:#66738a;line-height:1.5;margin:0 0 14px">Enter your app PIN to continue.</p>
   <form id="pinForm" novalidate>
@@ -103,7 +103,8 @@ details summary{cursor:pointer;font-weight:750}
 
 <div id="workerAuthGate" class="worker-auth-gate" aria-live="polite">
   <div class="worker-auth-card">
-    <div style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#66738a">DKASU • SWIPER ACCESS</div>
+    <img class="dkasu-login-logo" src="./dkasu-logo.png" alt="DKASU">
+    <div style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#66738a">DKASU OS • SWIPER ACCESS</div>
     <h1 id="workerAuthTitle">Sign in to your shift dashboard</h1>
     <p id="workerAuthMessage">Already registered? Continue with the Google account your DKASU admin invited.</p>
     <button id="workerGoogleButton" type="button">Continue with Google</button>
@@ -135,7 +136,7 @@ details summary{cursor:pointer;font-weight:750}
 <div id="appRoot" style="display:none">
 <div class="shell">
   <div class="appbar">
-    <div class="brand">DKASU · Shift Dashboard</div>
+    <div class="brand">DKASU OS · Shift Dashboard</div>
     <div class="app-actions">
       <button class="smallbtn secondary" id="profilesTopButton" type="button">Profiles</button>
       <button class="smallbtn" id="addTopButton" type="button">+ Add</button>

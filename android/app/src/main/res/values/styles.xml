@@ -16,7 +16,18 @@
     </style>
 
 
+    <!--
+        Android 12+ system splash. The animated icon must stay legible on the
+        cream window background, so it uses the DKASU tile (orange gradient +
+        white mark) rather than @mipmap/ic_launcher_foreground, which is a
+        white mark on transparency and would be invisible here.
+        Icon background colour matches the window so the icon mask is seamless.
+    -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
-        <item name="android:background">@drawable/splash</item>
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/splash_icon</item>
+        <item name="windowSplashScreenIconBackgroundColor">@color/splash_background</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
+        <item name="android:windowLightStatusBar">true</item>
     </style>
 </resources>
