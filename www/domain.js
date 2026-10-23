@@ -98,7 +98,11 @@ function normalizeSchedules(raw) {
     if (schedule.start === schedule.end) {
       throw new ValidationError(`Shift ${date} must have different start and end times.`);
     }
-    normalized.push([date, { start: schedule.start, end: schedule.end }]);
+    const normalizedShift = { start: schedule.start, end: schedule.end };
+    if (schedule.scheduleZone !== undefined) {
+      normalizedShift.scheduleZone = readZone(schedule.scheduleZone, `Shift ${date} time zone`, TZ.dubai);
+    }
+    normalized.push([date, normalizedShift]);
   }
   normalized.sort(([left], [right]) => left.localeCompare(right));
   return Object.fromEntries(normalized);
@@ -307,7 +311,7 @@ export function profileFromForm(form) {
     contractEnd,
     displayZone: form.displayZone,
     scheduleZone: form.scheduleZone,
-    schedules: parseScheduleLines(form.schedulesText || '')
+    schedules: parseScheduleLines(form.schedulesText || '', form.scheduleZone)
   };
 }
 
@@ -349,7 +353,7 @@ export function createWorkerProfilePackage(profile, now = new Date()) {
   if (!profile) throw new ValidationError('Choose a worker profile to export.');
   const normalized = cloneAsProfile(profile, now);
   // A worker handoff package contains setup data only. Confirmation history and
-  // PIN material are intentionally absent.
+  // App-lock material is intentionally absent.
   delete normalized.confirmations;
   const workerPackage = {
     format: WORKER_PACKAGE_FORMAT,

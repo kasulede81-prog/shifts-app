@@ -411,9 +411,8 @@ function renderSwipeWorkers() {
       <div class="swiper-actions"><button class="button quiet" data-action="save-assignments" data-swiper-id="${escapeHtml(swiper.id)}" type="button">Save assignments</button>
         <button class="button ${swiper.device_assignment_enabled ? 'quiet' : 'primary'}" data-action="toggle-device-assignment" data-swiper-id="${escapeHtml(swiper.id)}" type="button" ${swiper.is_active ? '' : 'disabled'}>Turn device groups ${swiper.device_assignment_enabled ? 'off' : 'on'}</button>
         ${swiper.is_active && !swiper.auth_user_id ? `<button class="button primary" data-action="activate-swiper" data-swiper-id="${escapeHtml(swiper.id)}" type="button">Issue operator code</button>` : ''}
-        ${swiper.is_active && swiper.auth_user_id ? `<button class="button quiet" data-action="reset-swiper-pin" data-swiper-id="${escapeHtml(swiper.id)}" type="button">Issue PIN reset code</button>` : ''}
         <button class="button ${swiper.is_active ? 'danger' : 'quiet'}" data-action="toggle-swiper" data-swiper-id="${escapeHtml(swiper.id)}" type="button">${swiper.is_active ? 'Deactivate' : 'Reactivate'}</button>
-      </div><div data-swiper-activation="${escapeHtml(swiper.id)}"></div><div data-swiper-pin-reset="${escapeHtml(swiper.id)}"></div></div>
+      </div><div data-swiper-activation="${escapeHtml(swiper.id)}"></div></div>
     </details>`;
   }).join('');
   applyListSearch('swiperSearch', 'swipeWorkerList', 'swiperSearchEmpty');
@@ -469,39 +468,6 @@ async function issueSwiperActivation(swiperId, button) {
     showNotice('Operator activation code created. Save or share it now; it is shown only here.', 'success');
   } catch (error) {
     showNotice(`Could not create operator code: ${error.message || error}`, 'error');
-  } finally {
-    setBusy(button, false);
-  }
-}
-
-async function issueSwiperPinReset(swiperId, button) {
-  const swiper = swipers.find((item) => item.id === swiperId);
-  if (!swiper?.is_active || !swiper.auth_user_id) {
-    showNotice('A PIN reset code is available only for an active, registered swiper.', 'error');
-    return;
-  }
-  setBusy(button, true, 'Creating…');
-  try {
-    const code = bytesToBase64Url(crypto.getRandomValues(new Uint8Array(32)));
-    const tokenHash = await hashToken(code);
-    const { data, error } = await supabase.rpc('shift_create_swiper_pin_reset', {
-      p_swiper_id: swiperId,
-      p_token_hash_hex: tokenHash
-    });
-    if (error) throw error;
-    const expiresAt = data?.expires_at;
-    if (!expiresAt) throw new Error('Supabase did not return the reset-code expiry. Refresh and try again.');
-    const target = document.querySelector(`[data-swiper-pin-reset="${CSS.escape(swiperId)}"]`);
-    if (target) {
-      target.innerHTML = `<div class="activation-code"><strong>One-time PIN reset code for ${escapeHtml(swiper.name)}</strong><code>${escapeHtml(code)}</code><span>Expires ${escapeHtml(new Date(expiresAt).toLocaleString())}. The swiper must sign in with their assigned Google account and enter this on the app lock screen. This code is shown only here.</span><div><button class="button quiet" data-action="copy-pin-reset-code" type="button">Copy code</button></div></div>`;
-      target.querySelector('[data-action="copy-pin-reset-code"]')?.addEventListener('click', async (event) => {
-        try { await navigator.clipboard.writeText(code); event.currentTarget.textContent = 'Copied'; }
-        catch { event.currentTarget.textContent = 'Select and copy the code above'; }
-      }, { once: true });
-    }
-    showNotice(`One-time PIN reset code created for ${swiper.name}. It expires in 15 minutes and is shown only here.`, 'success');
-  } catch (error) {
-    showNotice(`Could not create PIN reset code: ${error.message || error}`, 'error');
   } finally {
     setBusy(button, false);
   }
@@ -901,12 +867,11 @@ async function start() {
     if (!button) return;
     const { action, swiperId } = button.dataset;
     if (action === 'activate-swiper') await issueSwiperActivation(swiperId, button);
-    if (action === 'reset-swiper-pin') await issueSwiperPinReset(swiperId, button);
     if (action === 'save-assignments') await saveSwiperAssignments(swiperId, button);
     if (action === 'save-device-groups') await saveDeviceSwipeGroups(button.dataset.deviceId, button);
     if (action === 'toggle-device-assignment') await toggleDeviceAssignment(swiperId, button);
     if (action === 'toggle-swiper') await toggleSwiper(swiperId, button);
-    if (action === 'copy-code' || action === 'copy-pin-reset-code') {
+    if (action === 'copy-code') {
       const code = button.closest('.activation-code')?.querySelector('code')?.textContent;
       if (code) {
         try { await navigator.clipboard.writeText(code); button.textContent = 'Copied'; }

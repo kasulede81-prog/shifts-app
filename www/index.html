@@ -19,6 +19,7 @@ main{max-width:540px;margin:0 auto}.hero{background:linear-gradient(135deg,#1727
 .card{background:white;border:1px solid var(--line);border-radius:16px;padding:17px;margin-top:13px;box-shadow:0 3px 12px #162b4608}
 h2{font-size:16px;margin:0 0 13px}h3{font-size:13px;color:var(--muted);margin:0 0 7px;font-weight:650}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.metric{padding:13px;border-radius:12px;background:#f6f8fb;min-width:0}.metric .value{font-size:22px;font-weight:750;letter-spacing:-.03em;overflow-wrap:anywhere}.metric .small{font-size:12px;color:var(--muted);margin-top:3px}
+.metric.shift-state--upcoming{background:#eef4ff;border:1px solid #d9e5ff}.metric.shift-state--upcoming .value,.metric.shift-state--upcoming .small{color:#315a9c}.metric.shift-state--ongoing{background:#fff0ed;border:1px solid #f3c8c1}.metric.shift-state--ongoing .value,.metric.shift-state--ongoing .small{color:#b42318}.metric.shift-state--ended{background:#eaf7ef;border:1px solid #c5e7d1}.metric.shift-state--ended .value,.metric.shift-state--ended .small{color:#13764b}
 .timezone-select{width:100%;padding:12px;border:1px solid #d9e0ea;border-radius:10px;background:#fff;color:var(--ink);font:inherit;margin:5px 0 10px}.zone{border:1px solid var(--line);border-radius:12px;padding:13px;margin-top:9px;display:flex;align-items:center;justify-content:space-between;gap:12px}.zone .place{font-weight:700}.zone .zoneclock{font-size:22px;font-weight:750;font-variant-numeric:tabular-nums}.zone .offset{font-size:12px;color:var(--muted)}
 .rows{display:grid;gap:9px}.rowitem{display:flex;justify-content:space-between;gap:12px;font-size:14px;line-height:1.4}.rowitem .k{color:var(--muted)}.rowitem .v{text-align:right;font-weight:600;overflow-wrap:anywhere}
 .address{padding:13px;background:#f6f8fb;border:1px solid var(--line);border-radius:11px;font-size:16px;line-height:1.5;overflow-wrap:anywhere;user-select:text;-webkit-user-select:text}
@@ -28,7 +29,8 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .schedule{display:grid;gap:8px}.day{display:flex;justify-content:space-between;gap:10px;padding:11px;border:1px solid var(--line);border-radius:10px;font-size:13px}.day strong{display:block}.day span{color:var(--muted);text-align:right}
 .note{font-size:12px;line-height:1.5;color:var(--muted);margin:11px 0 0}.footer{text-align:center;color:var(--muted);font-size:11px;padding:16px}
 .note-help{margin:10px 0 0}.note-help summary{cursor:pointer;color:var(--muted);font-size:12px;font-weight:650;list-style:disclosure-closed}.note-help[open] summary{list-style:disclosure-open}.note-help .note{margin-top:6px}
-.confirmation{display:none;margin-top:14px;padding:15px;border:1px solid #f1c9a8;background:#fff8f2;border-radius:13px}.confirmation.show{display:block}.confirmation h3{font-size:15px;color:var(--ink);margin:0 0 6px}.confirmation p{font-size:13px;line-height:1.45;color:var(--muted);margin:0 0 12px}.swipe-track{position:relative;height:56px;border-radius:999px;background:#ffede3;color:#c84c1c;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:750;overflow:hidden;touch-action:pan-y;user-select:none}.swipe-track .swipe-label{pointer-events:none;padding:0 52px;text-align:center}.swipe-knob{position:absolute;left:4px;top:4px;width:48px;height:48px;border-radius:50%;background:#f15b2a;color:white;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 2px 6px #0002;cursor:grab;touch-action:none}.swipe-track.done{background:#e7f8ef;color:#13764b}.swipe-track.done .swipe-knob{background:#159764}.confirm-status{font-size:13px;font-weight:650;margin-top:9px;color:var(--green);min-height:18px}
+.google-login-button{display:flex;align-items:center;justify-content:center;gap:11px;background:#fff;color:#3c4043;border:1px solid #dadce0}.google-login-button svg{width:20px;height:20px;flex:0 0 20px}
+.confirmation{display:none;margin-top:14px;padding:15px;border:1px solid #f1c9a8;background:#fff8f2;border-radius:13px}.confirmation.show{display:block}.confirmation h3{font-size:15px;color:var(--ink);margin:0 0 6px}.confirmation p{font-size:13px;line-height:1.45;color:var(--muted);margin:0 0 12px}.swipe-track{position:relative;height:56px;border-radius:999px;background:#eef4ff;color:#315a9c;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:750;overflow:hidden;touch-action:pan-y;user-select:none}.swipe-track .swipe-label{pointer-events:none;padding:0 52px;text-align:center}.swipe-knob{position:absolute;left:4px;top:4px;width:48px;height:48px;border-radius:50%;background:#4569b4;color:white;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 2px 6px #0002;cursor:grab;touch-action:none}.swipe-track.swipe-state--upcoming{background:#eef4ff;color:#315a9c}.swipe-track.swipe-state--upcoming .swipe-knob{background:#4569b4}.swipe-track.swipe-state--ongoing{background:#ffede3;color:#b42318}.swipe-track.swipe-state--ongoing .swipe-knob{background:#c83f35}.swipe-track.swipe-state--ended,.swipe-track.done{background:#e7f8ef;color:#13764b}.swipe-track.swipe-state--ended .swipe-knob,.swipe-track.done .swipe-knob{background:#159764}.confirm-status{font-size:13px;font-weight:650;margin-top:9px;color:var(--green);min-height:18px}
 @media(min-width:430px){.zone{padding:15px}.zone .zoneclock{font-size:24px}}
 .shell{max-width:620px;margin:0 auto;padding:14px 14px 32px}
 .appbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;position:relative}
@@ -73,15 +75,12 @@ button.danger{background:#b42318}
 .dashboard-menu-toggle{display:grid;place-items:center;width:42px;height:42px;padding:0;margin:0;border:1px solid #dbe3ef;border-radius:13px;background:#fff;color:#263b5a;font-size:23px;box-shadow:0 3px 10px #17274412}.dashboard-menu-toggle:hover{background:#f2f5ff;border-color:#c7d2fe}.dashboard-menu{position:absolute;z-index:20;right:0;top:calc(100% + 8px);display:grid;grid-template-columns:1fr;gap:4px;width:min(230px,calc(100vw - 28px));padding:8px;border:1px solid #e3e8ef;border-radius:15px;background:#fff;box-shadow:0 14px 32px #17274424}.dashboard-menu button{display:flex;align-items:center;min-height:42px;margin:0;padding:10px 12px;border-radius:10px;background:#fff;color:#34445e;text-align:left;font-size:14px}.dashboard-menu button:hover{background:#f4f6fb}.dashboard-menu button[aria-current="page"]{background:#eef2ff;color:#3449bd}.dashboard-menu button[data-dashboard-security]{border-top:1px solid #e8ecf2;margin-top:5px;padding-top:13px}.dashboard-page{display:block}.dashboard-page.hidden{display:none!important}.page-link{margin-top:12px}
 details summary{cursor:pointer;font-weight:750}
 .card>summary{font-size:15px;color:var(--ink);list-style:none}.card>summary::-webkit-details-marker{display:none}.card>summary:after{content:'＋';float:right;color:var(--muted)}.card[open]>summary:after{content:'−'}.details-content{padding-top:12px}.next-day{border-color:#d9ddff;background:#f8f8ff}.next-zone{font-size:12px;color:var(--muted);margin-top:3px}.all-schedule{margin-top:12px}.all-schedule summary{padding:10px 0;color:var(--muted);font-size:13px}.all-schedule .schedule{max-height:280px;overflow:auto;padding-right:3px}
-.pin-error{min-height:18px;color:var(--danger);font-size:13px;margin:10px 0 0}
-.pin-recovery{margin-top:14px;padding-top:12px;border-top:1px solid #e3e8ef}.pin-recovery summary{cursor:pointer;color:#4559d8;font-size:13px;font-weight:750}.pin-recovery input{width:100%;box-sizing:border-box;padding:13px;border:1px solid #d9e0ea;border-radius:10px;font:inherit;margin:10px 0 0}.pin-recovery .pin-submit{font-size:13px;padding:12px;margin-top:8px}
-.pin-note{font-size:11px;color:#66738a;line-height:1.45;margin-top:12px}
+.small-note{font-size:11px;color:#66738a;line-height:1.45;margin-top:12px}
+.auth-error{min-height:18px;color:var(--danger);font-size:13px;margin:10px 0 0}
 .worker-auth-gate{position:fixed;inset:0;z-index:99998;background:#f3f6fa;display:none;align-items:center;justify-content:center;padding:22px;font-family:system-ui,sans-serif;overflow:auto}
 .worker-auth-card{width:100%;max-width:420px;background:#fff;border:1px solid #e3e8ef;border-radius:20px;padding:24px;box-shadow:0 12px 40px #17274420}
 .worker-auth-card h1{font-size:24px;margin:9px 0;color:#17233b}.worker-auth-card p{color:#66738a;line-height:1.5}.worker-auth-card input{width:100%;box-sizing:border-box;padding:13px;border:1px solid #d9e0ea;border-radius:10px;font:inherit;margin:6px 0}.dkasu-login-logo{display:block;width:min(220px,72%);height:auto;margin:0 auto 14px}
 .worker-auth-card #workerAuthMessage{margin:8px 0 14px}.worker-registration-choice{display:grid;gap:5px;margin-top:16px;padding-top:14px;border-top:1px solid #e3e8ef}.worker-registration-choice p{margin:0;font-size:13px;font-weight:700}.worker-auth-card .worker-registration-choice button{margin-top:4px}.worker-auth-card #workerRegisterIntro{margin-top:12px}.worker-auth-card #workerActivationForm{margin-top:14px}.worker-auth-card #workerActivationForm label{display:block;font-size:13px;font-weight:700;color:#344054}.worker-backup-details{margin-top:16px;padding-top:12px;border-top:1px solid #e3e8ef}.worker-backup-details summary{font-size:12px;color:#66738a}.worker-backup-details button{margin-top:4px}
-.pin-submit{width:100%;padding:14px;margin-top:12px;border:0;border-radius:11px;background:var(--blue);color:white;font-weight:700;font-size:15px}
-.security-toggle{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px;margin:16px 0;border:1px solid #d9e0ea;border-radius:12px;background:#fbfcfe}.security-toggle span{display:grid;gap:4px}.security-toggle strong{font-size:14px}.security-toggle small{color:#66738a;line-height:1.4}.security-toggle input{width:22px;height:22px;flex:none;accent-color:var(--blue)}#biometricUnlockStatus{min-height:20px}
 @media(max-width:420px){
  body{padding:calc(8px + env(safe-area-inset-top,0px)) calc(9px + env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) calc(9px + env(safe-area-inset-left,0px))}
  .shell{padding:8px 9px 20px}.hero{padding:14px;border-radius:15px}.eyebrow{font-size:10px}.hero h1{font-size:21px;margin:5px 0}.hero p{font-size:12px;line-height:1.4;margin:3px 0}.pill{padding:4px 8px;margin-top:6px}
@@ -94,37 +93,13 @@ details summary{cursor:pointer;font-weight:750}
 <script type="module" src="./boot.js"></script>
 </head>
 <body>
-<div id="pinGate" style="position:fixed;inset:0;z-index:99999;background:#f3f6fa;display:flex;align-items:center;justify-content:center;padding:calc(22px + env(safe-area-inset-top,0px)) calc(22px + env(safe-area-inset-right,0px)) calc(22px + env(safe-area-inset-bottom,0px)) calc(22px + env(safe-area-inset-left,0px));font-family:system-ui,sans-serif;overflow:auto">
- <div style="width:100%;max-width:380px;background:#fff;border:1px solid #e3e8ef;border-radius:20px;padding:24px;box-shadow:0 12px 40px #17274420">
-  <div style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#66738a">DKASU OS • PRIVATE DEVICE</div>
-  <h1 id="pinTitle" style="font-size:25px;margin:10px 0 6px;color:#17233b">Unlock shift dashboard</h1>
-  <p id="pinHelp" style="color:#66738a;line-height:1.5;margin:0 0 14px">Enter your app PIN to continue.</p>
-  <form id="pinForm" novalidate>
-   <input id="pinInput" aria-describedby="pinHelp pinError" inputmode="numeric" autocomplete="current-password" type="password" maxlength="12" placeholder="4–12 digit PIN" style="width:100%;box-sizing:border-box;padding:14px;border:1px solid #d9e0ea;border-radius:11px;font:inherit">
-   <input id="pinConfirm" inputmode="numeric" autocomplete="new-password" type="password" maxlength="12" placeholder="Confirm PIN" style="display:none;width:100%;box-sizing:border-box;padding:14px;border:1px solid #d9e0ea;border-radius:11px;font:inherit;margin-top:9px">
-   <button id="pinSubmit" class="pin-submit" type="submit">Unlock</button>
-  </form>
-  <button id="biometricUnlockButton" class="pin-submit hidden" type="button" style="background:#edf1f6;color:#182a45">Use fingerprint, face or phone lock</button>
-  <p id="pinError" class="pin-error" role="alert" aria-live="assertive"></p>
-  <details id="pinRecoveryPanel" class="pin-recovery hidden">
-   <summary>Forgot your PIN?</summary>
-   <p class="pin-note">Ask your DKASU admin for a one-time reset code. Sign in with the Google account registered to your swiper profile; the code expires after 15 minutes.</p>
-   <input id="pinRecoveryCode" autocomplete="one-time-code" maxlength="120" placeholder="Admin-issued reset code" aria-label="Admin-issued PIN reset code">
-   <button id="pinRecoverySubmit" class="pin-submit" type="button">Verify code and reset PIN</button>
-   <button id="pinRecoveryGoogleButton" class="pin-submit" type="button" style="background:#edf1f6;color:#182a45">Sign in with Google to recover</button>
-   <p id="pinRecoveryStatus" class="pin-note" role="status" aria-live="polite"></p>
-  </details>
-  <p class="pin-note">Your app PIN remains the fallback if optional biometric unlock is unavailable. It does not encrypt the SQLite database or replace a device lock. Keep a separate backup.</p>
- </div>
-</div>
-
 <div id="workerAuthGate" class="worker-auth-gate" aria-live="polite">
   <div class="worker-auth-card">
     <img class="dkasu-login-logo" src="./dkasu-logo.png" alt="DKASU">
     <div style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#66738a">DKASU OS • SWIPER ACCESS</div>
     <h1 id="workerAuthTitle">Sign in to your shift dashboard</h1>
     <p id="workerAuthMessage">Already registered? Continue with the Google account your DKASU admin invited.</p>
-    <button id="workerGoogleButton" type="button">Continue with Google</button>
+    <button id="workerGoogleButton" class="google-login-button" type="button"><svg aria-hidden="true" viewBox="0 0 48 48"><path fill="#4285F4" d="M43.6 24.5c0-1.4-.1-2.8-.4-4.1H24v7.8h11a9.4 9.4 0 0 1-4.1 6.2v5h6.6c3.9-3.6 6.1-8.9 6.1-14.9z"/><path fill="#34A853" d="M24 44c5.5 0 10.1-1.8 13.5-4.8l-6.6-5c-1.8 1.2-4.1 2-6.9 2-5.3 0-9.8-3.6-11.4-8.4H5.8v5.2C9.2 39.5 16 44 24 44z"/><path fill="#FBBC05" d="M12.6 27.8a12 12 0 0 1 0-7.6V15H5.8a20 20 0 0 0 0 18z"/><path fill="#EA4335" d="M24 8.8c3 0 5.7 1.1 7.8 3.3l5.8-5.8C34.1 2.9 29.5 1 24 1 16 1 9.2 5.5 5.8 12.2l6.8 5.2C14.2 12.4 18.7 8.8 24 8.8z"/></svg><span>Continue with Google</span></button>
     <button id="workerAuthSignOutButton" class="secondary hidden" type="button">Sign out of this account</button>
     <div id="workerRegistrationChoice" class="worker-registration-choice">
       <p>New to the shift app?</p>
@@ -141,12 +116,12 @@ details summary{cursor:pointer;font-weight:750}
     </form>
     <details class="worker-backup-details">
       <summary>Need to back up existing local data?</summary>
-      <p class="pin-note">Saved profiles and confirmations remain on this device. Export a backup here before continuing if you need a recovery or migration copy.</p>
+      <p class="small-note">Saved profiles and confirmations remain on this device. Export a backup here before continuing if you need a recovery or migration copy.</p>
       <button id="legacyBackupButton" class="secondary" type="button">Export local data backup</button>
-      <p id="legacyBackupStatus" class="pin-note" role="status" aria-live="polite"></p>
+      <p id="legacyBackupStatus" class="small-note" role="status" aria-live="polite"></p>
     </details>
-    <p id="workerAuthError" class="pin-error" role="alert" aria-live="assertive"></p>
-    <p class="pin-note">Your admin assigns the swipe accounts and manages their profiles and schedules. Your confirmations identify the account you selected and are self-reports, not official attendance.</p>
+    <p id="workerAuthError" class="auth-error" role="alert" aria-live="assertive"></p>
+    <p class="small-note">Your admin assigns the swipe accounts and manages their profiles and schedules. Your confirmations identify the account you selected and are self-reports, not official attendance.</p>
   </div>
 </div>
 
@@ -157,7 +132,7 @@ details summary{cursor:pointer;font-weight:750}
     <div class="app-actions">
       <button class="smallbtn secondary" id="profilesTopButton" type="button">Profiles</button>
       <button class="smallbtn" id="addTopButton" type="button">+ Add</button>
-      <button class="dashboard-menu-toggle" id="securityTopButton" type="button" aria-label="Open dashboard menu" aria-expanded="false" aria-controls="dashboardMenu" style="display:none">☰</button>
+      <button class="dashboard-menu-toggle" id="dashboardMenuButton" type="button" aria-label="Open dashboard menu" aria-expanded="false" aria-controls="dashboardMenu" style="display:none">☰</button>
       <button class="smallbtn secondary" id="workerSignOutButton" type="button" style="display:none">Sign out</button>
     </div>
   </div>
@@ -222,10 +197,10 @@ details summary{cursor:pointer;font-weight:750}
       <button id="importWorkerProfileButton" class="secondary" type="button">Import worker profile package</button>
       <input id="workerProfileFileInput" type="file" accept=".json,application/json" class="hidden">
     </div>
-    <p class="note">Worker packages contain the worker's details, Swipe ID and saved shifts, but never local confirmation history or PIN material. Share a package only with that worker. A duplicate worker profile is rejected without changing anything.</p>
+    <p class="note">Worker packages contain the worker's details, Swipe ID and saved shifts, but never local confirmation history or app-lock data. Share a package only with that worker. A duplicate worker profile is rejected without changing anything.</p>
 
     <h3>Full device backup</h3>
-    <p>Export every worker profile, saved schedule, time-zone setting and local self-confirmation to one JSON file. The PIN hash is never included.</p>
+    <p>Export every worker profile, saved schedule, time-zone setting and local self-confirmation to one JSON file. App-lock data is never included.</p>
     <div class="btnrow">
       <button id="exportBackupButton" type="button">Export full device backup</button>
       <button id="importBackupButton" class="secondary" type="button">Restore full backup</button>
@@ -234,19 +209,6 @@ details summary{cursor:pointer;font-weight:750}
     <p id="backupStatus" class="notice" role="status" aria-live="polite">Backups stay on this device unless you choose a share destination.</p>
     <div class="notice" style="background:#fef3f2;color:#b42318"><strong>Full restore replaces every profile and all local confirmation history on this phone.</strong> It is not the same as importing one worker profile. Export the current full backup before restoring another.</div>
     <button id="backFromBackupButton" class="secondary" type="button">Back to profiles</button>
-  </section>
-
-  <section class="panel hidden" id="securityPanel">
-    <h2>Security &amp; quick unlock</h2>
-    <p>Biometric unlock is optional and is saved only on this device. On supported Android versions, the system may offer your phone's PIN or pattern as a fallback. Google sign-in is still required for your worker account.</p>
-    <p>The app asks you to unlock again after it has been in the background for 5 minutes.</p>
-    <label class="security-toggle" for="biometricUnlockToggle">
-      <span><strong>Use biometric unlock</strong><small>Use the phone's available biometrics; your app PIN stays as a fallback.</small></span>
-      <input id="biometricUnlockToggle" type="checkbox" disabled>
-    </label>
-    <p id="biometricUnlockStatus" class="note" role="status" aria-live="polite">Checking this device…</p>
-    <p class="note">Your app PIN remains available as a fallback. This app lock does not encrypt the local database.</p>
-    <button id="backFromSecurityButton" class="secondary" type="button">Back to dashboard</button>
   </section>
 
   <section class="panel hidden" id="activeProfilePanel">
@@ -261,7 +223,7 @@ details summary{cursor:pointer;font-weight:750}
   <section class="panel" id="storagePanel">
     <h2>Device storage</h2>
     <p id="storageStatus">Checking local storage…</p>
-    <p>Profile data is saved separately by profile. Clearing app data or uninstalling the app may erase it, so export backups regularly. The PIN screen is not database encryption.</p>
+    <p>Profile data is saved separately by profile. Clearing app data or uninstalling the app may erase it, so export backups regularly. Protect this phone with its Android screen lock.</p>
   </section>
   <div class="footer">Local dashboard only · Not connected to Ogram</div>
 </div>
@@ -279,7 +241,6 @@ details summary{cursor:pointer;font-weight:750}
     <button type="button" data-dashboard-view="account">Account details</button>
     <button type="button" data-dashboard-view="contract">Contract</button>
     <button type="button" data-dashboard-view="settings">Settings</button>
-    <button type="button" data-dashboard-security>Security</button>
   </nav>
 </header>
 

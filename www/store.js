@@ -495,7 +495,8 @@ export class ProfileStore {
           for (let date = startDate; date <= endDate; date = addDaysToDateKey(date, 1)) {
             schedules[date] = {
               start: String(dailyRule.start_time || '').slice(0, 5),
-              end: String(dailyRule.end_time || '').slice(0, 5)
+              end: String(dailyRule.end_time || '').slice(0, 5),
+              scheduleZone: dailyRule.schedule_timezone || scheduleZone
             };
           }
         }
@@ -506,7 +507,8 @@ export class ProfileStore {
         } else {
           schedules[row.shift_date] = {
             start: String(row.start_time || '').slice(0, 5),
-            end: String(row.end_time || '').slice(0, 5)
+            end: String(row.end_time || '').slice(0, 5),
+            scheduleZone: row.schedule_timezone || scheduleZone
           };
         }
       }

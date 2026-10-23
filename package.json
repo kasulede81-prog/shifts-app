@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "DKASU multi-profile shift dashboard with on-device SQLite and PIN lock",
+  "description": "DKASU multi-profile shift dashboard with on-device SQLite and Google sign-in",
   "scripts": {
     "dev": "vite",
     "admin:dev": "vite --config vite.admin.config.js",
@@ -11,7 +11,7 @@
     "build": "vite build && vite build --config vite.admin.android.config.js",
     "test": "node --test",
     "test:browser": "npm run build && node scripts/browser-smoke.mjs",
-    "check:syntax": "node --check www/boot.js && node --check www/app.js && node --check www/worker-auth.js && node --check www/domain.js && node --check www/time.js && node --check www/pin.js && node --check www/store.js && node --check www/native-storage.js",
+    "check:syntax": "node --check www/boot.js && node --check www/app.js && node --check www/worker-auth.js && node --check www/domain.js && node --check www/time.js && node --check www/store.js && node --check www/native-storage.js",
     "android:add": "cap add android",
     "android:sync": "npm run build && cap sync android",
     "android:debug": "cd android && gradlew.bat assembleDebug",

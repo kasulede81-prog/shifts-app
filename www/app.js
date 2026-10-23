@@ -109,8 +109,8 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
     }
     const signOutButton = document.getElementById('workerSignOutButton');
     if (signOutButton) signOutButton.style.display = 'inline-block';
-    const securityButton = document.getElementById('securityTopButton');
-    if (securityButton) securityButton.style.display = 'inline-block';
+    const dashboardMenuButton = document.getElementById('dashboardMenuButton');
+    if (dashboardMenuButton) dashboardMenuButton.style.display = 'inline-block';
   }
 
   const refs = {
@@ -144,7 +144,6 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
 
   let currentProfile = null;
   let currentHost = null;
-  let resumeCurrentDashboard = null;
   let tickHandle = null;
   let editingProfileId = null;
   let openingProfile = false;
@@ -158,7 +157,7 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
   }
 
   function showOnly(panelId) {
-    for (const panelIdToToggle of ['profilePicker', 'profileEditor', 'backupPanel', 'securityPanel', 'activeProfilePanel']) {
+    for (const panelIdToToggle of ['profilePicker', 'profileEditor', 'backupPanel', 'activeProfilePanel']) {
       byId(panelIdToToggle)?.classList.toggle('hidden', panelIdToToggle !== panelId);
     }
   }
@@ -275,9 +274,10 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
         shiftHint.className = 'profile-next-shift';
         if (nextShift) {
           const isInProgress = pickerNow >= nextShift.bounds.start && pickerNow < nextShift.bounds.end;
+          const zone = nextShift.scheduleZone;
           shiftHint.textContent = isInProgress
-            ? `In progress · ends ${formatClock(nextShift.bounds.end, profile.scheduleZone, false)} · ${prettyDateKey(nextShift.bounds.endDateKey)} (${TIME_ZONE_NAMES[profile.scheduleZone]})`
-            : `Next swipe · ${formatClock(nextShift.bounds.start, profile.scheduleZone, false)} · ${prettyDateKey(nextShift.date)} (${TIME_ZONE_NAMES[profile.scheduleZone]})`;
+            ? `In progress · ends ${formatClock(nextShift.bounds.end, zone, false)} · ${prettyDateKey(nextShift.bounds.endDateKey)} (${TIME_ZONE_NAMES[zone]})`
+            : `Next swipe · ${formatClock(nextShift.bounds.start, zone, false)} · ${prettyDateKey(nextShift.date)} (${TIME_ZONE_NAMES[zone]})`;
         } else {
           shiftHint.textContent = 'No upcoming scheduled swipe';
         }
@@ -495,12 +495,19 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
     if (element) element.textContent = value;
   }
 
+  function shiftScheduleZone(profile, shift) {
+    return shift?.scheduleZone || profile.scheduleZone;
+  }
+
   function nextScheduledShift(profile, now = new Date()) {
     const dates = Object.keys(profile.schedules).sort();
     for (const date of dates) {
       try {
-        if (getShiftBounds(date, profile.schedules[date], profile.scheduleZone).end > now) {
-          return { date, shift: profile.schedules[date], bounds: getShiftBounds(date, profile.schedules[date], profile.scheduleZone) };
+        const shift = profile.schedules[date];
+        const scheduleZone = shiftScheduleZone(profile, shift);
+        const bounds = getShiftBounds(date, shift, scheduleZone);
+        if (bounds.end > now) {
+          return { date, shift, scheduleZone, bounds };
         }
       } catch {
         // Keep invalid saved dates visible in the full list for review.
@@ -523,7 +530,7 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
     const right = document.createElement('span');
     if (next) {
       title.textContent = `Next shift · ${prettyDateKey(next.date)}`;
-      zone.textContent = TIME_ZONE_NAMES[profile.scheduleZone];
+      zone.textContent = TIME_ZONE_NAMES[next.scheduleZone];
       right.textContent = `${next.shift.start}–${next.shift.end}${next.shift.end < next.shift.start ? ' (+1 day)' : ''}`;
     } else {
       title.textContent = 'No upcoming saved shift';
@@ -566,7 +573,7 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
       const dateLabel = document.createElement('strong');
       dateLabel.textContent = prettyDateKey(date);
       const zone = document.createElement('div');
-      zone.textContent = TIME_ZONE_NAMES[profile.scheduleZone];
+      zone.textContent = TIME_ZONE_NAMES[shiftScheduleZone(profile, shift)];
       left.append(dateLabel, zone);
       const right = document.createElement('span');
       const overnight = shift.end < shift.start;
@@ -637,10 +644,21 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
     const noteElement = host.querySelector('#selectedDateNote');
     const swipeLabelElement = host.querySelector('#swipeLabel');
     if (!dateInput) return;
+    const shiftStateCard = countdownElement?.closest('.metric');
+    const swipeTrackElement = host.querySelector('#swipeTrack');
+    const setShiftState = (state = '') => {
+      shiftStateCard?.classList.remove('shift-state--upcoming', 'shift-state--ongoing', 'shift-state--ended');
+      swipeTrackElement?.classList.remove('swipe-state--upcoming', 'swipe-state--ongoing', 'swipe-state--ended');
+      if (state) {
+        shiftStateCard?.classList.add(`shift-state--${state}`);
+        swipeTrackElement?.classList.add(`swipe-state--${state}`);
+      }
+    };
     const date = dateInput.value;
     const schedule = date ? profile.schedules[date] : null;
 
     if (!date) {
+      setShiftState();
       if (countdownElement) countdownElement.textContent = '—';
       if (statusElement) statusElement.textContent = 'Select a date';
       if (titleElement) titleElement.textContent = 'Shift hours';
@@ -650,6 +668,7 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
       return;
     }
     if (!schedule) {
+      setShiftState();
       if (countdownElement) countdownElement.textContent = '—';
       if (statusElement) statusElement.textContent = 'No saved shift';
       if (titleElement) titleElement.textContent = 'Shift hours (not saved)';
@@ -660,34 +679,39 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
     }
 
     try {
-      const bounds = getShiftBounds(date, schedule, profile.scheduleZone);
+      const scheduleZone = shiftScheduleZone(profile, schedule);
+      const bounds = getShiftBounds(date, schedule, scheduleZone);
       if (titleElement) titleElement.textContent = `Shift hours (${TIME_ZONE_NAMES[profile.displayZone]})`;
       if (valueElement) {
         valueElement.textContent = `${formatClock(bounds.start, profile.displayZone, false)}–${formatClock(bounds.end, profile.displayZone, false)}`;
       }
       if (sourceElement) {
         sourceElement.textContent = bounds.overnight
-          ? `Overnight · ends next day · ${TIME_ZONE_NAMES[profile.scheduleZone]} schedule`
-          : `Saved · ${TIME_ZONE_NAMES[profile.scheduleZone]} schedule`;
+          ? `Overnight · ends next day · ${TIME_ZONE_NAMES[scheduleZone]} schedule`
+          : `Saved · ${TIME_ZONE_NAMES[scheduleZone]} schedule`;
       }
       if (now < bounds.start) {
+        setShiftState('upcoming');
         if (countdownElement) countdownElement.textContent = formatDuration(bounds.start - now);
         if (statusElement) statusElement.textContent = `Not started · begins ${formatClock(bounds.start, profile.displayZone, false)} on ${prettyDateKey(date)} (${TIME_ZONE_NAMES[profile.displayZone]})`;
         if (swipeLabelElement && !profile.confirmations[date]) swipeLabelElement.textContent = 'Swipe available after shift ends';
       } else if (now < bounds.end) {
+        setShiftState('ongoing');
         if (countdownElement) countdownElement.textContent = formatDuration(bounds.end - now);
         if (statusElement) statusElement.textContent = `In progress · ends ${formatClock(bounds.end, profile.displayZone, false)} on ${prettyDateKey(bounds.endDateKey)} (${TIME_ZONE_NAMES[profile.displayZone]})`;
         if (swipeLabelElement && !profile.confirmations[date]) swipeLabelElement.textContent = 'Swipe available after shift ends';
       } else {
+        setShiftState('ended');
         if (countdownElement) countdownElement.textContent = 'Ended';
-        if (statusElement) statusElement.textContent = 'Finished · self-confirmation available';
+        if (statusElement) statusElement.textContent = 'Ended · self-confirmation available';
         if (swipeLabelElement && !profile.confirmations[date]) swipeLabelElement.textContent = 'Swipe to confirm finished';
       }
       if (noteElement) {
         const endDayNote = bounds.overnight ? ' The shift ends on the next schedule-zone date.' : '';
-        noteElement.textContent = `Shift date ${date}. Source schedule: ${TIME_ZONE_NAMES[profile.scheduleZone]}. Displayed in ${TIME_ZONE_NAMES[profile.displayZone]}.${endDayNote} Local self-confirmations do not change Ogram.`;
+        noteElement.textContent = `Shift date ${date}. Source schedule: ${TIME_ZONE_NAMES[scheduleZone]}. Displayed in ${TIME_ZONE_NAMES[profile.displayZone]}.${endDayNote} Local self-confirmations do not change Ogram.`;
       }
     } catch {
+      setShiftState();
       if (countdownElement) countdownElement.textContent = '—';
       if (statusElement) statusElement.textContent = 'Invalid saved shift';
       if (valueElement) valueElement.textContent = '—';
@@ -704,10 +728,9 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
     host.replaceChildren(dashboardTemplate.content.cloneNode(true));
 
     const menu = host.querySelector('#dashboardMenu');
-    const menuToggle = document.getElementById('securityTopButton');
+    const menuToggle = document.getElementById('dashboardMenuButton');
     const dashboardPages = [...host.querySelectorAll('[data-dashboard-page]')];
     const menuButtons = [...host.querySelectorAll('[data-dashboard-view]')];
-    const securityMenuButton = host.querySelector('[data-dashboard-security]');
     const appbar = document.querySelector('.appbar');
     if (menu && appbar) appbar.append(menu);
     if (menuToggle) menuToggle.onclick = () => {
@@ -729,12 +752,6 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
     for (const button of menuButtons) {
       button.addEventListener('click', () => openDashboardPage(button.dataset.dashboardView));
     }
-    securityMenuButton?.addEventListener('click', () => {
-      menu?.classList.add('hidden');
-      menuToggle?.setAttribute('aria-expanded', 'false');
-      showOnly('securityPanel');
-      document.dispatchEvent(new Event('dkasu:security-open'));
-    });
     for (const button of host.querySelectorAll('[data-open-dashboard-view]')) {
       button.addEventListener('click', () => openDashboardPage(button.dataset.openDashboardView));
     }
@@ -794,7 +811,7 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
       const schedule = currentSchedule();
       if (!date || !schedule) return 'No saved shift exists for this date. Nothing was confirmed.';
       try {
-        const bounds = getShiftBounds(date, schedule, profile.scheduleZone);
+        const bounds = getShiftBounds(date, schedule, shiftScheduleZone(profile, schedule));
         const now = new Date();
         if (now < bounds.start) {
           return `This shift has not started. It begins at ${formatDateTime(bounds.start, profile.displayZone)} (${TIME_ZONE_NAMES[profile.displayZone]} time). You can self-confirm only after the shift ends.`;
@@ -1015,7 +1032,7 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
         const selected = dateInput.value ? profile.schedules[dateInput.value] : null;
         if (selected) {
           try {
-            if (getShiftBounds(dateInput.value, selected, profile.scheduleZone).end <= now) {
+            if (getShiftBounds(dateInput.value, selected, shiftScheduleZone(profile, selected)).end <= now) {
               const next = nextScheduledShift(profile, now);
               if (next && next.date !== dateInput.value) {
                 dateInput.value = next.date;
@@ -1031,13 +1048,6 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
       renderContract(host, profile, now);
       renderShift(host, profile, now);
     }
-
-    resumeCurrentDashboard = () => {
-      if (destroyed || dashboardGeneration !== viewGeneration || !host.isConnected) return;
-      stopTicker();
-      tickDashboard();
-      tickHandle = setInterval(tickDashboard, 1000);
-    };
 
     restoreConfirmation();
     syncConfirmationPanel();
@@ -1297,8 +1307,6 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
   });
   refs.backupButton?.addEventListener('click', showBackupPanel);
   refs.backFromBackupButton?.addEventListener('click', () => showProfilePicker());
-  const backFromSecurityButton = byId('backFromSecurityButton');
-  if (backFromSecurityButton) backFromSecurityButton.onclick = () => showOnly('activeProfilePanel');
   refs.exportBackupButton?.addEventListener('click', () => {
     void exportBackup();
   });
@@ -1348,12 +1356,6 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
   byId('workerSignOutButton')?.addEventListener('click', () => { void onSignOut(); });
 
   return {
-    showProfilePickerForLock() {
-      stopTicker();
-    },
-    resumeAfterLock() {
-      resumeCurrentDashboard?.();
-    },
     destroy() {
       destroyed = true;
       stopTicker();

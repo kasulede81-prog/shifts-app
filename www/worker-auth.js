@@ -159,20 +159,6 @@ export async function claimSwiperActivation(code) {
   return data.swiper_id;
 }
 
-export async function claimSwiperPinReset(code) {
-  if (!shiftSupabase) throw new Error('Shift sign-in is not configured on this build.');
-  const normalizedCode = String(code || '').trim();
-  if (!normalizedCode) throw new Error('Enter the one-time reset code from your DKASU admin.');
-  const session = await getShiftSession();
-  if (!session) throw new Error('Sign in with the Google account registered to your swiper profile, then enter the reset code.');
-  const { data, error } = await shiftSupabase.rpc('shift_claim_swiper_pin_reset', { p_token: normalizedCode });
-  if (error) throw new Error(authError(error));
-  if (!data?.ok || !data.swiper_id) {
-    throw new Error('That reset code is invalid, expired, already used, or belongs to another Google account. Ask your DKASU admin for a new code.');
-  }
-  return data.swiper_id;
-}
-
 export async function loadShiftSwiperData() {
   if (!shiftSupabase) throw new Error('Shift sign-in is not configured on this build.');
   const session = await getShiftSession();
