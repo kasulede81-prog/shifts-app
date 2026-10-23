@@ -681,8 +681,8 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
     const dashboardPages = [...host.querySelectorAll('[data-dashboard-page]')];
     const menuButtons = [...host.querySelectorAll('[data-dashboard-view]')];
     const securityMenuButton = host.querySelector('[data-dashboard-security]');
-    const appActions = document.querySelector('.app-actions');
-    if (menu && appActions) appActions.append(menu);
+    const appbar = document.querySelector('.appbar');
+    if (menu && appbar) appbar.append(menu);
     if (menuToggle) menuToggle.onclick = () => {
       const isOpen = menuToggle.getAttribute('aria-expanded') === 'true';
       menuToggle.setAttribute('aria-expanded', String(!isOpen));
