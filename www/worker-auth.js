@@ -9,18 +9,6 @@ export const SHIFT_AUTH_REDIRECT = import.meta.env.VITE_SHIFT_AUTH_REDIRECT?.tri
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim();
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
 
-let shiftDeviceId = '';
-export function setShiftDeviceId(deviceId) {
-  shiftDeviceId = String(deviceId || '').trim();
-}
-
-const baseFetch = globalThis.fetch.bind(globalThis);
-async function shiftFetch(input, init = {}) {
-  const headers = new Headers(init.headers || (input instanceof Request ? input.headers : undefined));
-  if (shiftDeviceId) headers.set('x-dkasu-device-id', shiftDeviceId);
-  return baseFetch(input, { ...init, headers });
-}
-
 export const shiftSupabase = supabaseUrl && supabaseAnonKey
   ? createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
@@ -28,8 +16,7 @@ export const shiftSupabase = supabaseUrl && supabaseAnonKey
         autoRefreshToken: true,
         detectSessionInUrl: false,
         flowType: 'pkce'
-      },
-      global: { fetch: shiftFetch }
+      }
     })
   : null;
 
@@ -165,25 +152,11 @@ export async function loadShiftSwiperData() {
   if (!session) return null;
   const { data: swiper, error: swiperError } = await shiftSupabase
     .from('shift_swipers')
-    .select('id,name,email,is_active,device_assignment_enabled')
+    .select('id,name,email,is_active')
     .eq('auth_user_id', session.user.id)
     .maybeSingle();
   if (swiperError) throw new Error(authError(swiperError));
   if (!swiper) return null;
-  if (!shiftDeviceId) throw new Error('This installation has no registered device identity. Sign out and back in, then try again.');
-  const { error: deviceError } = await shiftSupabase.rpc('shift_register_device', {
-    p_device_id: shiftDeviceId,
-    p_device_name: Capacitor.isNativePlatform() ? 'DKASU Shift Android' : 'DKASU Shift browser',
-    p_platform: Capacitor.getPlatform()
-  });
-  if (deviceError) throw new Error(authError(deviceError));
-  const { data: device, error: currentDeviceError } = await shiftSupabase
-    .from('shift_swiper_devices')
-    .select('id,device_name,is_active')
-    .eq('id', shiftDeviceId)
-    .maybeSingle();
-  if (currentDeviceError) throw new Error(authError(currentDeviceError));
-  if (!device?.is_active) throw new Error('This device has been disabled by the DKASU admin.');
   const { data: assignments, error: assignmentError } = await shiftSupabase
     .from('shift_swiper_assignments')
     .select('worker_id,shift_workers!inner(id,name,email,ogram_profile_id,swipe_id,job_title,company_name,location,address,contract_start,contract_end,display_timezone,schedule_timezone,is_active)')
@@ -191,7 +164,7 @@ export async function loadShiftSwiperData() {
   if (assignmentError) throw new Error(authError(assignmentError));
   const workers = (assignments || []).map((assignment) => assignment.shift_workers).filter((worker) => worker?.is_active);
   const workerIds = workers.map((worker) => worker.id);
-  if (!workerIds.length) return { session, swiper, device, accounts: [] };
+  if (!workerIds.length) return { session, swiper, accounts: [] };
   const [scheduleResult, ruleResult] = await Promise.all([
     shiftSupabase.from('shift_schedules')
       .select('id,worker_id,shift_date,start_time,end_time,schedule_kind,schedule_timezone,revision,updated_at')
@@ -208,7 +181,7 @@ export async function loadShiftSwiperData() {
     schedules: (scheduleResult.data || []).filter((row) => row.worker_id === worker.id),
     dailyRule: (ruleResult.data || []).find((row) => row.worker_id === worker.id) || null
   }));
-  return { session, swiper, device, accounts };
+  return { session, swiper, accounts };
 }
 
 export async function syncSwiperConfirmations(store, profileId, workerId) {
