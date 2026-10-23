@@ -49,7 +49,7 @@ const workerAuthTitle = document.getElementById('workerAuthTitle');
 const workerAuthMessage = document.getElementById('workerAuthMessage');
 const workerAuthError = document.getElementById('workerAuthError');
 const workerGoogleButton = document.getElementById('workerGoogleButton');
-const workerSignOutButton = document.getElementById('workerSignOutButton');
+const workerAuthSignOutButton = document.getElementById('workerAuthSignOutButton');
 const workerRegistrationChoice = document.getElementById('workerRegistrationChoice');
 const workerRegisterButton = document.getElementById('workerRegisterButton');
 const workerRegisterIntro = document.getElementById('workerRegisterIntro');
@@ -382,7 +382,7 @@ function showWorkerGate(message, { needsActivation = false, needsAssignment = fa
   if (workerGoogleButton) workerGoogleButton.textContent = needsActivation
     ? 'Use a different Google account'
     : workerRegistrationMode ? 'Continue with Google to register' : 'Continue with Google';
-  if (workerSignOutButton) workerSignOutButton.classList.toggle('hidden', !signedIn);
+  if (workerAuthSignOutButton) workerAuthSignOutButton.classList.toggle('hidden', !signedIn);
   if (workerRegistrationChoice) workerRegistrationChoice.classList.toggle('hidden', needsActivation || needsAssignment || workerRegistrationMode);
   if (workerRegisterIntro) workerRegisterIntro.classList.toggle('hidden', needsActivation || needsAssignment || !workerRegistrationMode);
   if (workerActivationForm) workerActivationForm.classList.toggle('hidden', !needsActivation);
@@ -835,9 +835,9 @@ workerGoogleButton?.addEventListener('click', async () => {
   }
 });
 
-workerSignOutButton?.addEventListener('click', async () => {
-  if (workerSignOutButton.disabled) return;
-  workerSignOutButton.disabled = true;
+workerAuthSignOutButton?.addEventListener('click', async () => {
+  if (workerAuthSignOutButton.disabled) return;
+  workerAuthSignOutButton.disabled = true;
   workerAuthError.textContent = '';
   try {
     await signOutShiftWorker();
@@ -846,7 +846,7 @@ workerSignOutButton?.addEventListener('click', async () => {
   } catch (error) {
     workerAuthError.textContent = `Sign-out could not finish. ${error?.message || error}`;
   } finally {
-    workerSignOutButton.disabled = false;
+    workerAuthSignOutButton.disabled = false;
   }
 });
 
