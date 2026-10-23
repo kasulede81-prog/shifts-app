@@ -15,6 +15,7 @@ import {
   shiftAuthConfigured,
   signInWithGoogle,
   signOutShiftWorker,
+  setShiftDeviceId,
   syncSwiperConfirmations
 } from './worker-auth.js';
 import {
@@ -250,6 +251,19 @@ async function savePinRecord(serialized) {
   }
 }
 
+async function getOperatorDeviceId(userId) {
+  const key = `dkasu_shift_device_${userId}`;
+  const saved = await Preferences.get({ key });
+  if (saved.value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(saved.value)) {
+    return saved.value;
+  }
+  const id = crypto.randomUUID();
+  await Preferences.set({ key, value: id });
+  const verified = await Preferences.get({ key });
+  if (verified.value !== id) throw new Error('Could not save this operator’s device identity.');
+  return id;
+}
+
 async function startDashboard() {
   if (!shiftAuthConfigured) {
     showWorkerGate('Sign-in is not configured in this build. Ask the DKASU admin to finish the shift app setup.');
@@ -277,6 +291,10 @@ async function startDashboard() {
       }
     }
 
+    const deviceId = await getOperatorDeviceId(session.user.id);
+    setShiftDeviceId(deviceId);
+    const deviceAssignmentsKey = `dkasu.shift.assignments.${session.user.id}.${deviceId}`;
+
     let workerContext = null;
     let workerIdsByProfileId = {};
     try {
@@ -292,22 +310,23 @@ async function startDashboard() {
       }
       if (!workerContext.accounts.length) {
         workerRegistrationMode = false;
-        showWorkerGate(`Swiper access is active for ${session.user.email || 'your account'}, but the admin has not assigned any swipe accounts yet. Ask the DKASU admin to assign your accounts.`, { needsAssignment: true, signedIn: true });
+        showWorkerGate(`Swiper access is active for ${session.user.email || 'your account'}, but this device has no assigned Swipe ID groups yet. Ask the DKASU admin to assign account groups to this device, then reconnect.`, { needsAssignment: true, signedIn: true });
         return;
       }
       for (const account of workerContext.accounts) {
         const profile = await applicationStore.syncRemoteWorker(account.worker, account.schedules, account.dailyRule);
         workerIdsByProfileId[profile.id] = account.worker.id;
       }
-      await applicationStorage.setItem(`dkasu.shift.assignments.${session.user.id}`, JSON.stringify({
+      await applicationStorage.setItem(deviceAssignmentsKey, JSON.stringify({
         swiperId: workerContext.swiper.id,
+        deviceId,
         workerIds: workerContext.accounts.map(({ worker }) => worker.id)
       }));
     } catch (error) {
-      const cachedAssignmentsRaw = await applicationStorage.getItem(`dkasu.shift.assignments.${session.user.id}`);
+      const cachedAssignmentsRaw = await applicationStorage.getItem(deviceAssignmentsKey);
       let cachedAssignments = null;
       try { cachedAssignments = cachedAssignmentsRaw ? JSON.parse(cachedAssignmentsRaw) : null; } catch { /* Ignore an invalid cache; do not overwrite it. */ }
-      if (!cachedAssignments?.workerIds?.length) {
+      if (cachedAssignments?.deviceId !== deviceId || !cachedAssignments?.workerIds?.length) {
         showWorkerGate(`Could not load your assigned swipe accounts. Check your connection and try again. ${error?.message || error}`);
         return;
       }
@@ -337,6 +356,7 @@ async function startDashboard() {
       onSignOut: async () => {
         try {
           await signOutShiftWorker();
+          setShiftDeviceId('');
           applicationApp?.destroy?.();
           applicationApp = null;
           appStarted = false;
@@ -841,6 +861,7 @@ workerAuthSignOutButton?.addEventListener('click', async () => {
   workerAuthError.textContent = '';
   try {
     await signOutShiftWorker();
+    setShiftDeviceId('');
     workerRegistrationMode = false;
     showWorkerGate('You are signed out. Choose “Register as a swiper” to continue with another Google account.');
   } catch (error) {

@@ -27,6 +27,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 #copyStatus{min-height:18px;color:var(--green);font-size:13px;margin-top:7px}
 .schedule{display:grid;gap:8px}.day{display:flex;justify-content:space-between;gap:10px;padding:11px;border:1px solid var(--line);border-radius:10px;font-size:13px}.day strong{display:block}.day span{color:var(--muted);text-align:right}
 .note{font-size:12px;line-height:1.5;color:var(--muted);margin:11px 0 0}.footer{text-align:center;color:var(--muted);font-size:11px;padding:16px}
+.note-help{margin:10px 0 0}.note-help summary{cursor:pointer;color:var(--muted);font-size:12px;font-weight:650;list-style:disclosure-closed}.note-help[open] summary{list-style:disclosure-open}.note-help .note{margin-top:6px}
 .confirmation{display:none;margin-top:14px;padding:15px;border:1px solid #f1c9a8;background:#fff8f2;border-radius:13px}.confirmation.show{display:block}.confirmation h3{font-size:15px;color:var(--ink);margin:0 0 6px}.confirmation p{font-size:13px;line-height:1.45;color:var(--muted);margin:0 0 12px}.swipe-track{position:relative;height:56px;border-radius:999px;background:#ffede3;color:#c84c1c;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:750;overflow:hidden;touch-action:pan-y;user-select:none}.swipe-track .swipe-label{pointer-events:none;padding:0 52px;text-align:center}.swipe-knob{position:absolute;left:4px;top:4px;width:48px;height:48px;border-radius:50%;background:#f15b2a;color:white;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 2px 6px #0002;cursor:grab;touch-action:none}.swipe-track.done{background:#e7f8ef;color:#13764b}.swipe-track.done .swipe-knob{background:#159764}.confirm-status{font-size:13px;font-weight:650;margin-top:9px;color:var(--green);min-height:18px}
 @media(min-width:430px){.zone{padding:15px}.zone .zoneclock{font-size:24px}}
 .shell{max-width:620px;margin:0 auto;padding:14px 14px 32px}
@@ -48,6 +49,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .profile-meta strong{display:block;font-size:14px;overflow-wrap:anywhere}
 .profile-meta span{display:block;font-size:12px;color:#6b7890;margin-top:3px;overflow-wrap:anywhere}
 .profile-meta .profile-identifiers{color:#465675}
+.profile-meta .profile-next-shift{margin-top:4px;color:#234ea0;font-size:11px;font-weight:750;line-height:1.35}
 .profile-selected-badge{flex-shrink:0;border-radius:999px;background:#dce5ff;color:#3449b5;padding:5px 8px;font-size:11px;font-weight:700}
 .profile-empty-search{padding:16px;border:1px dashed #cbd5e1;border-radius:12px;color:#64748b;text-align:center}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
@@ -80,7 +82,14 @@ details summary{cursor:pointer;font-weight:750}
 .worker-auth-card #workerAuthMessage{margin:8px 0 14px}.worker-registration-choice{display:grid;gap:5px;margin-top:16px;padding-top:14px;border-top:1px solid #e3e8ef}.worker-registration-choice p{margin:0;font-size:13px;font-weight:700}.worker-auth-card .worker-registration-choice button{margin-top:4px}.worker-auth-card #workerRegisterIntro{margin-top:12px}.worker-auth-card #workerActivationForm{margin-top:14px}.worker-auth-card #workerActivationForm label{display:block;font-size:13px;font-weight:700;color:#344054}.worker-backup-details{margin-top:16px;padding-top:12px;border-top:1px solid #e3e8ef}.worker-backup-details summary{font-size:12px;color:#66738a}.worker-backup-details button{margin-top:4px}
 .pin-submit{width:100%;padding:14px;margin-top:12px;border:0;border-radius:11px;background:var(--blue);color:white;font-weight:700;font-size:15px}
 .security-toggle{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px;margin:16px 0;border:1px solid #d9e0ea;border-radius:12px;background:#fbfcfe}.security-toggle span{display:grid;gap:4px}.security-toggle strong{font-size:14px}.security-toggle small{color:#66738a;line-height:1.4}.security-toggle input{width:22px;height:22px;flex:none;accent-color:var(--blue)}#biometricUnlockStatus{min-height:20px}
-@media(max-width:420px){.fieldgrid{grid-template-columns:1fr}.shell{padding:10px}}
+@media(max-width:420px){
+ body{padding:calc(8px + env(safe-area-inset-top,0px)) calc(9px + env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) calc(9px + env(safe-area-inset-left,0px))}
+ .shell{padding:8px 9px 20px}.hero{padding:14px;border-radius:15px}.eyebrow{font-size:10px}.hero h1{font-size:21px;margin:5px 0}.hero p{font-size:12px;line-height:1.4;margin:3px 0}.pill{padding:4px 8px;margin-top:6px}
+ .card{padding:12px;border-radius:13px;margin-top:9px}h2{font-size:15px;margin-bottom:8px}.grid{gap:7px}.metric{padding:9px;border-radius:10px}.metric .value{font-size:19px}.metric .small{font-size:11px;line-height:1.35}
+ .note{font-size:11px;line-height:1.4;margin-top:7px}.note-help{margin-top:7px}.note-help summary{font-size:11px}.confirmation{margin-top:9px;padding:11px}.confirmation h3{font-size:14px}.confirmation p{font-size:12px;margin-bottom:9px}.swipe-track{height:52px;font-size:13px}
+ .page-link{padding:10px;margin-top:7px;font-size:13px}.quick-links{display:flex;gap:7px;margin-top:7px}.quick-links button{flex:1;min-width:0;width:auto;padding:10px 8px;margin:0;font-size:12px;line-height:1.25}
+ .schedule{gap:6px}.day{padding:9px;font-size:12px}.address{padding:10px;font-size:14px;line-height:1.4}.panel{padding:12px;margin-bottom:10px}.panel h2{font-size:16px;margin-bottom:8px}.profile-view{margin-top:8px}.fieldgrid{grid-template-columns:1fr}
+}
 </style>
 <script type="module" src="./boot.js"></script>
 </head>
@@ -157,7 +166,7 @@ details summary{cursor:pointer;font-weight:750}
 
   <section class="panel" id="profilePicker">
     <h2>Choose a swipe account</h2>
-    <p id="profilePickerHelp">The owner/admin assigns swipe accounts to each operator. Choose an assigned account to view its saved schedule and record a self-confirmation.</p>
+    <p id="profilePickerHelp">Choose an assigned account. Accounts are ordered by the next scheduled swipe time.</p>
     <div class="profile-picker-tools" id="profilePickerTools" hidden>
       <label class="sr-only" for="profileSearch">Search assigned swipe accounts</label>
       <input id="profileSearch" type="search" autocomplete="off" placeholder="Search by account name, email or ID">
@@ -281,24 +290,30 @@ details summary{cursor:pointer;font-weight:750}
     <div class="metric"><h3 id="shiftHoursTitle">Shift hours</h3><div class="value" id="shiftHoursValue">—</div><div class="small" id="shiftHoursSource">Saved schedule only</div></div>
     <div class="metric"><h3>Shift countdown</h3><div class="value" id="shiftCountdown">—</div><div class="small" id="shiftStatus">Select a date</div></div>
   </div>
-  <p class="note" id="selectedDateNote">Only dates with a saved shift are shown. Check Ogram for official attendance and schedule changes.</p>
+  <details class="note-help">
+    <summary>Help</summary>
+    <p class="note" id="selectedDateNote">Only dates with a saved shift are shown. Check Ogram for official attendance and schedule changes.</p>
+    <p class="note">A self-confirmation records your report for the selected shift. It does not submit attendance to Ogram or change any Ogram record.</p>
+    <p class="note">If copying is blocked, press and hold the work address to select and copy it.</p>
+  </details>
+  <div class="quick-links">
+    <button type="button" class="secondary" data-open-dashboard-view="settings">Time zone</button>
+    <button type="button" class="secondary" data-open-dashboard-view="schedule">Choose date</button>
+  </div>
   <div class="confirmation show" id="endShiftConfirmation" aria-live="polite">
     <h3>Have you finished your shift?</h3>
-    <p>This records your self-confirmation for the selected shift. It does not submit attendance to Ogram or change any Ogram record.</p>
     <div class="swipe-track" id="swipeTrack" role="group" aria-label="Swipe to confirm shift finished">
       <span class="swipe-label" id="swipeLabel">Swipe to confirm finished</span>
       <span class="swipe-knob" id="swipeKnob" aria-hidden="true">›</span>
     </div>
     <div class="confirm-status" id="endShiftStatus" role="status" aria-live="polite"></div>
   </div>
-  <button type="button" class="secondary page-link" data-open-dashboard-view="schedule">Choose a shift date</button>
 </section>
 
 <section class="card">
   <h2>Work address</h2>
   <div class="address" id="address"></div>
   <button id="copyAddress" type="button">Copy address</button><div id="copyStatus" role="status" aria-live="polite"></div>
-  <p class="note">If copying is blocked, press and hold the address text to select and copy it.</p>
 </section>
 </section>
 

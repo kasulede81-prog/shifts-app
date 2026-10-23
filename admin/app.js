@@ -25,6 +25,8 @@ let activeUser = null;
 let workers = [];
 let swipers = [];
 let swiperAssignments = [];
+let swiperDevices = [];
+let deviceSwipeGroups = [];
 let schedules = [];
 let scheduleRules = [];
 const expandedWorkerIds = new Set();
@@ -132,7 +134,7 @@ async function previewWorkerPackage(file) {
       (profile.email && worker.email.trim().toLowerCase() === profile.email.trim().toLowerCase())
     );
     if (duplicate) {
-      throw new Error(`A worker with this profile ID or email already exists (${duplicate.name}). Existing data was not changed.`);
+      throw new Error(`An account with this profile ID or email already exists (${duplicate.name}). Existing data was not changed.`);
     }
     pendingWorkerPackage = parsed;
     const shiftCount = Object.keys(profile.schedules).length;
@@ -224,7 +226,7 @@ async function getCompanyId() {
 }
 
 async function loadDashboard() {
-  const [workerResult, confirmationResult, swiperResult, assignmentResult] = await Promise.all([
+  const [workerResult, confirmationResult, swiperResult, assignmentResult, deviceResult, groupResult] = await Promise.all([
     supabase.from('shift_workers')
       .select('id,name,email,ogram_profile_id,swipe_id,job_title,company_name,location,address,contract_start,contract_end,display_timezone,schedule_timezone,source_local_id,is_active,auth_user_id')
       .eq('company_id', companyId)
@@ -239,15 +241,26 @@ async function loadDashboard() {
       .order('name'),
     supabase.from('shift_swiper_assignments')
       .select('swiper_id,worker_id')
+      .eq('company_id', companyId),
+    supabase.from('shift_swiper_devices')
+      .select('id,company_id,swiper_id,device_name,platform,is_active,first_seen_at,last_seen_at')
+      .eq('company_id', companyId)
+      .order('last_seen_at', { ascending: false }),
+    supabase.from('shift_device_swipe_groups')
+      .select('device_id,swipe_id_key,assigned_at')
       .eq('company_id', companyId)
   ]);
   if (workerResult.error) throw workerResult.error;
   if (confirmationResult.error) throw confirmationResult.error;
   if (swiperResult.error) throw swiperResult.error;
   if (assignmentResult.error) throw assignmentResult.error;
+  if (deviceResult.error) throw deviceResult.error;
+  if (groupResult.error) throw groupResult.error;
   workers = workerResult.data || [];
   swipers = swiperResult.data || [];
   swiperAssignments = assignmentResult.data || [];
+  swiperDevices = deviceResult.data || [];
+  deviceSwipeGroups = groupResult.data || [];
   const workerIds = workers.map((worker) => worker.id);
   if (workerIds.length) {
     const [scheduleResult, ruleResult] = await Promise.all([
@@ -270,6 +283,35 @@ async function loadDashboard() {
   renderWorkers();
   renderSwipeWorkers();
   renderConfirmations(confirmationResult.data || []);
+}
+
+function swipeGroupKey(worker) {
+  const swipeId = String(worker.swipe_id || '').trim().toLocaleLowerCase();
+  return swipeId ? `swipe:${swipeId}` : `worker:${worker.id}`;
+}
+
+async function saveDeviceSwipeGroups(deviceId, button) {
+  const card = swipeWorkerList.querySelector(`[data-device-card="${CSS.escape(deviceId)}"]`);
+  if (!card) return;
+  const keys = [...card.querySelectorAll('[data-device-swipe-group]:checked')]
+    .map((input) => input.dataset.deviceSwipeGroup);
+  setBusy(button, true, 'Saving…');
+  try {
+    const { error } = await supabase.rpc('shift_set_device_swipe_groups', {
+      p_device_id: deviceId,
+      p_swipe_id_keys: keys
+    });
+    if (error) throw error;
+    await loadDashboard();
+    showNotice(`Saved ${keys.length} Swipe ID group${keys.length === 1 ? '' : 's'} to this device.`, 'success');
+  } catch (error) {
+    const conflict = error.code === '23505' || String(error.message || '').includes('shift_device_swipe_groups');
+    showNotice(conflict
+      ? 'One of these Swipe ID groups is already assigned to another device. Remove it from that device first, then save here.'
+      : `Could not save device assignments: ${error.message || error}`, 'error');
+  } finally {
+    setBusy(button, false);
+  }
 }
 
 function renderWorkers() {
@@ -333,11 +375,39 @@ function renderSwipeWorkers() {
     const status = !swiper.is_active ? 'Inactive' : swiper.auth_user_id ? 'Activated' : 'Needs activation';
     const statusClass = !swiper.is_active ? 'disabled' : swiper.auth_user_id ? 'linked' : 'pending';
     const assigned = new Set(swiperAssignments.filter((row) => row.swiper_id === swiper.id).map((row) => row.worker_id));
+    const operatorWorkers = workers.filter((worker) => assigned.has(worker.id));
+    const groups = new Map();
+    for (const worker of operatorWorkers) {
+      const key = swipeGroupKey(worker);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(worker);
+    }
+    const devices = swiperDevices.filter((device) => device.swiper_id === swiper.id);
+    const groupOwners = new Map(deviceSwipeGroups.map((row) => [row.swipe_id_key, row.device_id]));
     const searchText = [swiper.name, swiper.email].filter(Boolean).join(' ').toLocaleLowerCase();
     return `<details class="swipe-worker-card swiper-card" data-search="${escapeHtml(searchText)}" data-swiper-card="${escapeHtml(swiper.id)}" ${expandedSwiperIds.has(swiper.id) ? 'open' : ''}>
       <summary class="swiper-summary"><span class="swipe-worker-heading"><strong>${escapeHtml(swiper.name)}</strong><span>${escapeHtml(swiper.email)}</span></span><span class="swiper-summary-side"><span class="worker-access-status ${statusClass}">${status}</span><span class="worker-chevron" aria-hidden="true">⌄</span></span></summary>
       <div class="swiper-details"><p class="swiper-assignment-count">${assigned.size} swipe account${assigned.size === 1 ? '' : 's'} assigned</p>
       <details class="assignment-picker"><summary>Manage assigned accounts</summary><div class="assignment-options">${workers.map((worker) => `<label><input type="checkbox" data-assigned-worker="${escapeHtml(worker.id)}" ${assigned.has(worker.id) ? 'checked' : ''}><span>${escapeHtml(worker.name)} · ${escapeHtml(worker.swipe_id || worker.ogram_profile_id || 'No ID')}${worker.is_active ? '' : ' · Inactive'}</span></label>`).join('') || '<span class="muted small">Add swipe accounts first.</span>'}</div></details>
+      <details class="assignment-picker device-picker"><summary>Assign Swipe ID groups to devices (${devices.length})</summary>
+        <p class="schedule-help">Every account with the same Swipe ID is grouped and must stay on one device.</p>
+        ${devices.map((device) => {
+          const assignedKeys = new Set(deviceSwipeGroups.filter((row) => row.device_id === device.id).map((row) => row.swipe_id_key));
+          const deviceStatus = device.is_active ? 'Ready' : 'Disabled';
+          const deviceLabel = `${device.device_name} · ${String(device.id).slice(-6).toUpperCase()}`;
+          return `<div class="device-assignment" data-device-card="${escapeHtml(device.id)}"><strong>${escapeHtml(deviceLabel)}</strong><span class="muted small">${escapeHtml(device.platform)} · ${deviceStatus} · Last used ${escapeHtml(new Date(device.last_seen_at).toLocaleString())}</span>
+            <div class="assignment-options">${[...groups.entries()].map(([key, members]) => {
+              const ownerDeviceId = groupOwners.get(key);
+              const ownedElsewhere = ownerDeviceId && ownerDeviceId !== device.id;
+              const ownerDevice = swiperDevices.find((candidate) => candidate.id === ownerDeviceId);
+              const ownerSwiper = swipers.find((candidate) => candidate.id === ownerDevice?.swiper_id);
+              const suffix = ownedElsewhere ? ` · Assigned to ${ownerSwiper?.name || 'another operator'}’s device ${String(ownerDeviceId).slice(-6).toUpperCase()}` : '';
+              return `<label><input type="checkbox" data-device-swipe-group="${escapeHtml(key)}" ${assignedKeys.has(key) ? 'checked' : ''} ${device.is_active && !ownedElsewhere ? '' : 'disabled'}><span>${escapeHtml(members[0].swipe_id || 'No Swipe ID')} · ${members.length} account${members.length === 1 ? '' : 's'}${members.length > 1 ? ` (${members.map((member) => escapeHtml(member.name)).join(', ')})` : ''}${escapeHtml(suffix)}</span></label>`;
+            }).join('') || '<span class="muted small">Assign swipe accounts to this operator first.</span>'}</div>
+            <button class="button quiet" data-action="save-device-groups" data-device-id="${escapeHtml(device.id)}" type="button" ${device.is_active ? '' : 'disabled'}>Save device groups</button>
+          </div>`;
+        }).join('') || '<p class="muted small">This operator’s devices appear here after they sign in on each device. Refresh the admin dashboard after sign-in.</p>'}
+      </details>
       <div class="swiper-actions"><button class="button quiet" data-action="save-assignments" data-swiper-id="${escapeHtml(swiper.id)}" type="button">Save assignments</button>
         ${swiper.is_active && !swiper.auth_user_id ? `<button class="button primary" data-action="activate-swiper" data-swiper-id="${escapeHtml(swiper.id)}" type="button">Issue operator code</button>` : ''}
         ${swiper.is_active && swiper.auth_user_id ? `<button class="button quiet" data-action="reset-swiper-pin" data-swiper-id="${escapeHtml(swiper.id)}" type="button">Issue PIN reset code</button>` : ''}
@@ -807,6 +877,7 @@ async function start() {
     if (action === 'activate-swiper') await issueSwiperActivation(swiperId, button);
     if (action === 'reset-swiper-pin') await issueSwiperPinReset(swiperId, button);
     if (action === 'save-assignments') await saveSwiperAssignments(swiperId, button);
+    if (action === 'save-device-groups') await saveDeviceSwipeGroups(button.dataset.deviceId, button);
     if (action === 'toggle-swiper') await toggleSwiper(swiperId, button);
     if (action === 'copy-code' || action === 'copy-pin-reset-code') {
       const code = button.closest('.activation-code')?.querySelector('code')?.textContent;

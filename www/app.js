@@ -222,8 +222,17 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
     const collator = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true });
     const matchingProfiles = profiles
       .filter((profile) => !query || [profile.name, profile.email, profile.job, profile.company, profile.location, profile.profileId, profile.swipeId]
-        .some((value) => String(value || '').toLocaleLowerCase().includes(query)))
-      .sort((a, b) => collator.compare(a.name || '', b.name || '') || collator.compare(a.swipeId || a.profileId || '', b.swipeId || b.profileId || ''));
+        .some((value) => String(value || '').toLocaleLowerCase().includes(query)));
+    const pickerNow = new Date();
+    const upcomingByProfileId = new Map(matchingProfiles.map((profile) => [profile.id, nextScheduledShift(profile, pickerNow)]));
+    matchingProfiles.sort((a, b) => {
+      if (workerMode) {
+        const aStart = upcomingByProfileId.get(a.id)?.bounds.start.getTime() ?? Number.POSITIVE_INFINITY;
+        const bStart = upcomingByProfileId.get(b.id)?.bounds.start.getTime() ?? Number.POSITIVE_INFINITY;
+        if (aStart !== bStart) return aStart < bStart ? -1 : 1;
+      }
+      return collator.compare(a.name || '', b.name || '') || collator.compare(a.swipeId || a.profileId || '', b.swipeId || b.profileId || '');
+    });
     if (workerMode && profilePickerCount) {
       profilePickerCount.textContent = query
         ? `${matchingProfiles.length} of ${profiles.length} accounts`
@@ -260,6 +269,20 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
       const details = document.createElement('span');
       details.textContent = [profile.job, profile.company, profile.email].filter(Boolean).join(' · ') || 'Account details not set';
       meta.append(name, details);
+      if (workerMode) {
+        const nextShift = upcomingByProfileId.get(profile.id);
+        const shiftHint = document.createElement('span');
+        shiftHint.className = 'profile-next-shift';
+        if (nextShift) {
+          const isInProgress = pickerNow >= nextShift.bounds.start && pickerNow < nextShift.bounds.end;
+          shiftHint.textContent = isInProgress
+            ? `In progress · ends ${formatClock(nextShift.bounds.end, profile.scheduleZone, false)} · ${prettyDateKey(nextShift.bounds.endDateKey)} (${TIME_ZONE_NAMES[profile.scheduleZone]})`
+            : `Next swipe · ${formatClock(nextShift.bounds.start, profile.scheduleZone, false)} · ${prettyDateKey(nextShift.date)} (${TIME_ZONE_NAMES[profile.scheduleZone]})`;
+        } else {
+          shiftHint.textContent = 'No upcoming scheduled swipe';
+        }
+        meta.appendChild(shiftHint);
+      }
       const identifiers = [profile.swipeId ? `Swipe ID ${profile.swipeId}` : '', profile.profileId ? `Profile ID ${profile.profileId}` : '']
         .filter(Boolean).join(' · ');
       if (identifiers) {
@@ -477,7 +500,7 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
     for (const date of dates) {
       try {
         if (getShiftBounds(date, profile.schedules[date], profile.scheduleZone).end > now) {
-          return { date, shift: profile.schedules[date] };
+          return { date, shift: profile.schedules[date], bounds: getShiftBounds(date, profile.schedules[date], profile.scheduleZone) };
         }
       } catch {
         // Keep invalid saved dates visible in the full list for review.
@@ -612,6 +635,7 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
     const valueElement = host.querySelector('#shiftHoursValue');
     const sourceElement = host.querySelector('#shiftHoursSource');
     const noteElement = host.querySelector('#selectedDateNote');
+    const swipeLabelElement = host.querySelector('#swipeLabel');
     if (!dateInput) return;
     const date = dateInput.value;
     const schedule = date ? profile.schedules[date] : null;
@@ -648,13 +672,16 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
       }
       if (now < bounds.start) {
         if (countdownElement) countdownElement.textContent = formatDuration(bounds.start - now);
-        if (statusElement) statusElement.textContent = 'Until shift starts';
+        if (statusElement) statusElement.textContent = `Not started · begins ${formatClock(bounds.start, profile.displayZone, false)} on ${prettyDateKey(date)} (${TIME_ZONE_NAMES[profile.displayZone]})`;
+        if (swipeLabelElement && !profile.confirmations[date]) swipeLabelElement.textContent = 'Swipe available after shift ends';
       } else if (now < bounds.end) {
         if (countdownElement) countdownElement.textContent = formatDuration(bounds.end - now);
-        if (statusElement) statusElement.textContent = 'Time until shift ends';
+        if (statusElement) statusElement.textContent = `In progress · ends ${formatClock(bounds.end, profile.displayZone, false)} on ${prettyDateKey(bounds.endDateKey)} (${TIME_ZONE_NAMES[profile.displayZone]})`;
+        if (swipeLabelElement && !profile.confirmations[date]) swipeLabelElement.textContent = 'Swipe available after shift ends';
       } else {
         if (countdownElement) countdownElement.textContent = 'Ended';
-        if (statusElement) statusElement.textContent = 'Confirm attendance in Ogram if required';
+        if (statusElement) statusElement.textContent = 'Finished · self-confirmation available';
+        if (swipeLabelElement && !profile.confirmations[date]) swipeLabelElement.textContent = 'Swipe to confirm finished';
       }
       if (noteElement) {
         const endDayNote = bounds.overnight ? ' The shift ends on the next schedule-zone date.' : '';
@@ -762,6 +789,28 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
       const date = currentDate();
       return date ? profile.schedules[date] : null;
     };
+    function confirmationBlockReason() {
+      const date = currentDate();
+      const schedule = currentSchedule();
+      if (!date || !schedule) return 'No saved shift exists for this date. Nothing was confirmed.';
+      try {
+        const bounds = getShiftBounds(date, schedule, profile.scheduleZone);
+        const now = new Date();
+        if (now < bounds.start) {
+          return `This shift has not started. It begins at ${formatDateTime(bounds.start, profile.displayZone)} (${TIME_ZONE_NAMES[profile.displayZone]} time). You can self-confirm only after the shift ends.`;
+        }
+        if (now < bounds.end) {
+          return `This shift is still in progress. It ends at ${formatDateTime(bounds.end, profile.displayZone)} (${TIME_ZONE_NAMES[profile.displayZone]} time). You can self-confirm after it ends.`;
+        }
+        return '';
+      } catch {
+        return 'The saved shift time is invalid. Ask your admin to correct the schedule.';
+      }
+    }
+    function showConfirmationBlock(reason) {
+      if (confirmStatus) confirmStatus.textContent = reason;
+      showAppMessage(reason, 'error');
+    }
     const maxOffset = () => Math.max(0, (track?.clientWidth || 0) - (knob?.offsetWidth || 0) - 8);
 
     function paint(offset) {
@@ -817,9 +866,10 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
     async function saveConfirmation() {
       const date = currentDate();
       if (savingConfirmation || completed) return;
-      if (!date || !profile.schedules[date]) {
+      const blockedReason = confirmationBlockReason();
+      if (blockedReason) {
         resetConfirmation();
-        if (confirmStatus) confirmStatus.textContent = 'No saved shift exists for this date. Nothing was confirmed.';
+        showConfirmationBlock(blockedReason);
         return;
       }
       savingConfirmation = true;
@@ -868,6 +918,11 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
 
     function beginDrag(event) {
       if (completed || savingConfirmation) return;
+      const blockedReason = confirmationBlockReason();
+      if (blockedReason) {
+        showConfirmationBlock(blockedReason);
+        return;
+      }
       dragging = true;
       dragStartX = event.clientX;
       knob?.setPointerCapture?.(event.pointerId);
@@ -924,6 +979,7 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
 
     dateInput?.addEventListener('change', () => {
       manuallySelectedScheduleDate = true;
+      clearAppMessage();
       restoreConfirmation();
       syncConfirmationPanel();
       renderShift(host, profile, new Date());
