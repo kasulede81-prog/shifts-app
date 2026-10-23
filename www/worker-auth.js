@@ -179,7 +179,7 @@ export async function loadShiftSwiperData() {
   if (!session) return null;
   const { data: swiper, error: swiperError } = await shiftSupabase
     .from('shift_swipers')
-    .select('id,name,email,is_active')
+    .select('id,name,email,is_active,device_assignment_enabled')
     .eq('auth_user_id', session.user.id)
     .maybeSingle();
   if (swiperError) throw new Error(authError(swiperError));

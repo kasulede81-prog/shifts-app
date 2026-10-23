@@ -236,7 +236,7 @@ async function loadDashboard() {
       .order('received_at', { ascending: false })
       .limit(100),
     supabase.from('shift_swipers')
-      .select('id,name,email,is_active,auth_user_id')
+      .select('id,name,email,is_active,auth_user_id,device_assignment_enabled')
       .eq('company_id', companyId)
       .order('name'),
     supabase.from('shift_swiper_assignments')
@@ -386,7 +386,7 @@ function renderSwipeWorkers() {
     const groupOwners = new Map(deviceSwipeGroups.map((row) => [row.swipe_id_key, row.device_id]));
     const searchText = [swiper.name, swiper.email].filter(Boolean).join(' ').toLocaleLowerCase();
     return `<details class="swipe-worker-card swiper-card" data-search="${escapeHtml(searchText)}" data-swiper-card="${escapeHtml(swiper.id)}" ${expandedSwiperIds.has(swiper.id) ? 'open' : ''}>
-      <summary class="swiper-summary"><span class="swipe-worker-heading"><strong>${escapeHtml(swiper.name)}</strong><span>${escapeHtml(swiper.email)}</span></span><span class="swiper-summary-side"><span class="worker-access-status ${statusClass}">${status}</span><span class="worker-chevron" aria-hidden="true">⌄</span></span></summary>
+      <summary class="swiper-summary"><span class="swipe-worker-heading"><strong>${escapeHtml(swiper.name)}</strong><span>${escapeHtml(swiper.email)}</span></span><span class="swiper-summary-side"><span class="worker-access-status ${statusClass}">${status}</span><span class="worker-access-status ${swiper.device_assignment_enabled ? 'linked' : 'pending'}">Device groups ${swiper.device_assignment_enabled ? 'ON' : 'OFF'}</span><span class="worker-chevron" aria-hidden="true">⌄</span></span></summary>
       <div class="swiper-details"><p class="swiper-assignment-count">${assigned.size} swipe account${assigned.size === 1 ? '' : 's'} assigned</p>
       <details class="assignment-picker"><summary>Manage assigned accounts</summary><div class="assignment-options">${workers.map((worker) => `<label><input type="checkbox" data-assigned-worker="${escapeHtml(worker.id)}" ${assigned.has(worker.id) ? 'checked' : ''}><span>${escapeHtml(worker.name)} · ${escapeHtml(worker.swipe_id || worker.ogram_profile_id || 'No ID')}${worker.is_active ? '' : ' · Inactive'}</span></label>`).join('') || '<span class="muted small">Add swipe accounts first.</span>'}</div></details>
       <details class="assignment-picker device-picker"><summary>Assign Swipe ID groups to devices (${devices.length})</summary>
@@ -409,6 +409,7 @@ function renderSwipeWorkers() {
         }).join('') || '<p class="muted small">This operator’s devices appear here after they sign in on each device. Refresh the admin dashboard after sign-in.</p>'}
       </details>
       <div class="swiper-actions"><button class="button quiet" data-action="save-assignments" data-swiper-id="${escapeHtml(swiper.id)}" type="button">Save assignments</button>
+        <button class="button ${swiper.device_assignment_enabled ? 'quiet' : 'primary'}" data-action="toggle-device-assignment" data-swiper-id="${escapeHtml(swiper.id)}" type="button" ${swiper.is_active ? '' : 'disabled'}>Turn device groups ${swiper.device_assignment_enabled ? 'off' : 'on'}</button>
         ${swiper.is_active && !swiper.auth_user_id ? `<button class="button primary" data-action="activate-swiper" data-swiper-id="${escapeHtml(swiper.id)}" type="button">Issue operator code</button>` : ''}
         ${swiper.is_active && swiper.auth_user_id ? `<button class="button quiet" data-action="reset-swiper-pin" data-swiper-id="${escapeHtml(swiper.id)}" type="button">Issue PIN reset code</button>` : ''}
         <button class="button ${swiper.is_active ? 'danger' : 'quiet'}" data-action="toggle-swiper" data-swiper-id="${escapeHtml(swiper.id)}" type="button">${swiper.is_active ? 'Deactivate' : 'Reactivate'}</button>
@@ -537,6 +538,31 @@ async function toggleSwiper(swiperId, button) {
     showNotice(swiper.is_active ? 'Operator deactivated. Access stops at the next online sync.' : 'Operator reactivated.', 'success');
   } catch (error) {
     showNotice(`Could not update operator: ${error.message || error}`, 'error');
+  } finally {
+    setBusy(button, false);
+  }
+}
+
+async function toggleDeviceAssignment(swiperId, button) {
+  const swiper = swipers.find((item) => item.id === swiperId);
+  if (!swiper) return;
+  const enabled = !swiper.device_assignment_enabled;
+  setBusy(button, true, 'Saving…');
+  try {
+    const { error } = await supabase.rpc('shift_set_swiper_device_assignment', {
+      p_swiper_id: swiperId,
+      p_enabled: enabled
+    });
+    if (error) throw error;
+    await loadDashboard();
+    showNotice(enabled
+      ? `Device Swipe ID grouping is on for ${swiper.name}. Each assigned account group is limited to its selected device.`
+      : `Device Swipe ID grouping is off for ${swiper.name}. Their assigned accounts can be used on any of their devices.`, 'success');
+  } catch (error) {
+    const incomplete = String(error.message || '').includes('device_groups_incomplete');
+    showNotice(incomplete
+      ? `Assign every active Swipe ID group to one of ${swiper.name}’s registered devices, then turn device groups on.`
+      : `Could not change device grouping: ${error.message || error}`, 'error');
   } finally {
     setBusy(button, false);
   }
@@ -878,6 +904,7 @@ async function start() {
     if (action === 'reset-swiper-pin') await issueSwiperPinReset(swiperId, button);
     if (action === 'save-assignments') await saveSwiperAssignments(swiperId, button);
     if (action === 'save-device-groups') await saveDeviceSwipeGroups(button.dataset.deviceId, button);
+    if (action === 'toggle-device-assignment') await toggleDeviceAssignment(swiperId, button);
     if (action === 'toggle-swiper') await toggleSwiper(swiperId, button);
     if (action === 'copy-code' || action === 'copy-pin-reset-code') {
       const code = button.closest('.activation-code')?.querySelector('code')?.textContent;
