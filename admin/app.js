@@ -661,6 +661,7 @@ async function renderSession(user) {
 async function start() {
   if (!supabaseConfigured) {
     $('#googleButton').disabled = true;
+    $('#registerSwiperButton').disabled = true;
     $('#configHelp').classList.remove('hidden');
     showNotice('Supabase is not configured in this build. No credentials are embedded in the source.', 'error');
     return;
@@ -705,6 +706,11 @@ async function start() {
       showNotice(`Google sign-in could not start: ${error.message || error}`, 'error');
       setBusy(button, false);
     }
+  });
+
+  $('#registerSwiperButton').addEventListener('click', () => {
+    showNotice('Sign in with the Google email your DKASU admin added. You can enter the one-time activation code after sign-in.');
+    $('#googleButton').click();
   });
 
   $('#signOutButton').addEventListener('click', async () => {
