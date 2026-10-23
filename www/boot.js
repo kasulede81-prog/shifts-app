@@ -40,6 +40,7 @@ const LEGACY_PIN_KEY = 'dkasu_pin_sha256';
 const PIN_GUARD_KEY = 'dkasu_pin_guard_v2';
 const BIOMETRIC_UNLOCK_KEY = 'dkasu_biometric_unlock_v1';
 const LEGACY_HASH_PATTERN = /^[a-f0-9]{64}$/i;
+const APP_LOCK_BACKGROUND_DELAY_MS = 5 * 60 * 1000;
 const biometricUnlock = registerPlugin('BiometricUnlock');
 
 const gate = document.getElementById('pinGate');
@@ -83,6 +84,7 @@ let busy = true;
 let lockTimer = null;
 let appStarted = false;
 let appLocked = false;
+let appBackgroundedAt = null;
 let biometricEnabled = false;
 let applicationStore = null;
 let applicationStorage = null;
@@ -744,15 +746,24 @@ for (const input of [pinInput, pinConfirm]) {
 const refreshAfterResume = () => {
   if (!document.hidden && !busy && mode !== 'fatal' && mode !== 'corrupt') refreshControls();
 };
-const handleVisibilityChange = () => {
-  if (document.visibilityState === 'hidden') {
-    if (appStarted && !appLocked) showResumeLock();
-    return;
+const handleAppForeground = () => {
+  if (document.hidden) return;
+  if (appStarted && !appLocked && appBackgroundedAt !== null) {
+    const awayFor = Date.now() - appBackgroundedAt;
+    appBackgroundedAt = null;
+    if (awayFor >= APP_LOCK_BACKGROUND_DELAY_MS) showResumeLock();
   }
   refreshAfterResume();
 };
+const handleVisibilityChange = () => {
+  if (document.visibilityState === 'hidden') {
+    if (appStarted && !appLocked && appBackgroundedAt === null) appBackgroundedAt = Date.now();
+    return;
+  }
+  handleAppForeground();
+};
 document.addEventListener('visibilitychange', handleVisibilityChange);
-window.addEventListener('focus', refreshAfterResume);
+window.addEventListener('focus', handleAppForeground);
 
 async function start() {
   try {

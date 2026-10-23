@@ -93,8 +93,10 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
     const pickerTitle = document.querySelector('#profilePicker h2');
     const pickerHelp = document.getElementById('profilePickerHelp');
     const roleNotice = document.getElementById('profilePickerRoleNotice');
+    const pickerTools = document.getElementById('profilePickerTools');
     if (pickerTitle) pickerTitle.textContent = 'Choose a swipe account';
-    if (pickerHelp) pickerHelp.textContent = 'Choose one of the swipe accounts assigned to you by the DKASU admin. Your confirmation will identify both you and this account.';
+    if (pickerHelp) pickerHelp.textContent = 'Select the account you need. The dashboard and self-confirmation will use that account.';
+    if (pickerTools) pickerTools.hidden = false;
     if (roleNotice) roleNotice.classList.add('hidden');
     for (const id of ['profilesTopButton', 'addTopButton', 'addProfileButton', 'backupButton', 'editActiveButton', 'deleteActiveButton']) {
       const element = document.getElementById(id);
@@ -137,6 +139,8 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
     importWorkerProfileButton: document.getElementById('importWorkerProfileButton'),
     workerProfileFileInput: document.getElementById('workerProfileFileInput')
   };
+  const profileSearch = document.getElementById('profileSearch');
+  const profilePickerCount = document.getElementById('profilePickerCount');
 
   let currentProfile = null;
   let currentHost = null;
@@ -203,6 +207,9 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
     refs.profileList.replaceChildren();
     const profiles = store.listProfiles();
     const activeId = store.getActiveProfileId();
+    if (workerMode && profilePickerCount) {
+      profilePickerCount.textContent = `${profiles.length} assigned account${profiles.length === 1 ? '' : 's'}`;
+    }
     if (!profiles.length) {
       const empty = document.createElement('p');
       empty.textContent = store.readOnly
@@ -211,11 +218,30 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
       refs.profileList.appendChild(empty);
       return;
     }
-    for (const profile of profiles) {
+    const query = workerMode ? (profileSearch?.value || '').trim().toLocaleLowerCase() : '';
+    const collator = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true });
+    const matchingProfiles = profiles
+      .filter((profile) => !query || [profile.name, profile.email, profile.job, profile.company, profile.location, profile.profileId, profile.swipeId]
+        .some((value) => String(value || '').toLocaleLowerCase().includes(query)))
+      .sort((a, b) => collator.compare(a.name || '', b.name || '') || collator.compare(a.swipeId || a.profileId || '', b.swipeId || b.profileId || ''));
+    if (workerMode && profilePickerCount) {
+      profilePickerCount.textContent = query
+        ? `${matchingProfiles.length} of ${profiles.length} accounts`
+        : `${profiles.length} assigned account${profiles.length === 1 ? '' : 's'}`;
+    }
+    if (!matchingProfiles.length) {
+      const empty = document.createElement('div');
+      empty.className = 'profile-empty-search';
+      empty.textContent = query ? 'No assigned accounts match that search.' : 'No assigned swipe accounts are available.';
+      refs.profileList.appendChild(empty);
+      return;
+    }
+    for (const profile of matchingProfiles) {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = `profile-choice${profile.id === activeId ? ' active' : ''}`;
       button.dataset.profileId = profile.id;
+      button.setAttribute('aria-pressed', String(profile.id === activeId));
 
       const avatar = document.createElement('div');
       avatar.className = 'avatar';
@@ -232,8 +258,23 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
       const name = document.createElement('strong');
       name.textContent = profile.name;
       const details = document.createElement('span');
-      details.textContent = [profile.job, profile.email].filter(Boolean).join(' · ') || 'No job or email saved';
+      details.textContent = [profile.job, profile.company, profile.email].filter(Boolean).join(' · ') || 'Account details not set';
       meta.append(name, details);
+      const identifiers = [profile.swipeId ? `Swipe ID ${profile.swipeId}` : '', profile.profileId ? `Profile ID ${profile.profileId}` : '']
+        .filter(Boolean).join(' · ');
+      if (identifiers) {
+        const ids = document.createElement('span');
+        ids.className = 'profile-identifiers';
+        ids.textContent = identifiers;
+        meta.appendChild(ids);
+      }
+
+      if (profile.id === activeId && workerMode) {
+        const selected = document.createElement('span');
+        selected.className = 'profile-selected-badge';
+        selected.textContent = 'Selected';
+        meta.appendChild(selected);
+      }
 
       const chevron = document.createElement('span');
       chevron.setAttribute('aria-hidden', 'true');
@@ -251,6 +292,7 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
     viewGeneration += 1;
     stopTicker();
     currentProfile = null;
+    if (profileSearch) profileSearch.value = '';
     if (clearMessage) clearAppMessage();
     if (message) showAppMessage(message, tone);
     renderProfileList();
@@ -1185,6 +1227,7 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
   }
 
   byId('profilesTopButton')?.addEventListener('click', showProfilePickerAndClear);
+  profileSearch?.addEventListener('input', renderProfileList);
   byId('addTopButton')?.addEventListener('click', startAddProfile);
   refs.addProfileButton?.addEventListener('click', startAddProfile);
   refs.cancelEditorButton?.addEventListener('click', () => showProfilePicker());
