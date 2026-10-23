@@ -303,7 +303,7 @@ async function saveDeviceSwipeGroups(deviceId, button) {
     });
     if (error) throw error;
     await loadDashboard();
-    showNotice(`Saved ${keys.length} Swipe ID group${keys.length === 1 ? '' : 's'} to this device.`, 'success');
+    showNotice(`Saved ${keys.length} Swipe ID group${keys.length === 1 ? '' : 's'} to this device. Selected groups now belong to it.`, 'success');
   } catch (error) {
     const conflict = error.code === '23505' || String(error.message || '').includes('shift_device_swipe_groups');
     showNotice(conflict
@@ -401,8 +401,8 @@ function renderSwipeWorkers() {
               const ownedElsewhere = ownerDeviceId && ownerDeviceId !== device.id;
               const ownerDevice = swiperDevices.find((candidate) => candidate.id === ownerDeviceId);
               const ownerSwiper = swipers.find((candidate) => candidate.id === ownerDevice?.swiper_id);
-              const suffix = ownedElsewhere ? ` · Assigned to ${ownerSwiper?.name || 'another operator'}’s device ${String(ownerDeviceId).slice(-6).toUpperCase()}` : '';
-              return `<label><input type="checkbox" data-device-swipe-group="${escapeHtml(key)}" ${assignedKeys.has(key) ? 'checked' : ''} ${device.is_active && !ownedElsewhere ? '' : 'disabled'}><span>${escapeHtml(members[0].swipe_id || 'No Swipe ID')} · ${members.length} account${members.length === 1 ? '' : 's'}${members.length > 1 ? ` (${members.map((member) => escapeHtml(member.name)).join(', ')})` : ''}${escapeHtml(suffix)}</span></label>`;
+              const suffix = ownedElsewhere ? ` · Currently on ${ownerSwiper?.name || 'another operator'}’s device ${String(ownerDeviceId).slice(-6).toUpperCase()} — selecting moves it here` : '';
+              return `<label><input type="checkbox" data-device-swipe-group="${escapeHtml(key)}" ${assignedKeys.has(key) ? 'checked' : ''} ${device.is_active ? '' : 'disabled'}><span>${escapeHtml(members[0].swipe_id || 'No Swipe ID')} · ${members.length} account${members.length === 1 ? '' : 's'}${members.length > 1 ? ` (${members.map((member) => escapeHtml(member.name)).join(', ')})` : ''}${escapeHtml(suffix)}</span></label>`;
             }).join('') || '<span class="muted small">Assign swipe accounts to this operator first.</span>'}</div>
             <button class="button quiet" data-action="save-device-groups" data-device-id="${escapeHtml(device.id)}" type="button" ${device.is_active ? '' : 'disabled'}>Save device groups</button>
           </div>`;
