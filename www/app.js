@@ -151,6 +151,7 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
   let viewGeneration = 0;
   let syncVisibilityHandler = null;
   let syncOnlineHandler = null;
+  let workerRefreshHandle = null;
 
   function byId(id) {
     return document.getElementById(id);
@@ -694,12 +695,12 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
         setShiftState('upcoming');
         if (countdownElement) countdownElement.textContent = formatDuration(bounds.start - now);
         if (statusElement) statusElement.textContent = `Not started · begins ${formatClock(bounds.start, profile.displayZone, false)} on ${prettyDateKey(date)} (${TIME_ZONE_NAMES[profile.displayZone]})`;
-        if (swipeLabelElement && !profile.confirmations[date]) swipeLabelElement.textContent = 'Swipe available after shift ends';
+        if (swipeLabelElement && !profile.confirmations[date]) swipeLabelElement.textContent = 'Swipe to start';
       } else if (now < bounds.end) {
         setShiftState('ongoing');
         if (countdownElement) countdownElement.textContent = formatDuration(bounds.end - now);
         if (statusElement) statusElement.textContent = `In progress · ends ${formatClock(bounds.end, profile.displayZone, false)} on ${prettyDateKey(bounds.endDateKey)} (${TIME_ZONE_NAMES[profile.displayZone]})`;
-        if (swipeLabelElement && !profile.confirmations[date]) swipeLabelElement.textContent = 'Swipe available after shift ends';
+        if (swipeLabelElement && !profile.confirmations[date]) swipeLabelElement.textContent = 'Swipe to end';
       } else {
         setShiftState('ended');
         if (countdownElement) countdownElement.textContent = 'Ended';
@@ -806,6 +807,20 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
       const date = currentDate();
       return date ? profile.schedules[date] : null;
     };
+    function currentSwipePrompt() {
+      const date = currentDate();
+      const schedule = currentSchedule();
+      if (!date || !schedule) return 'Swipe to confirm finished';
+      try {
+        const bounds = getShiftBounds(date, schedule, shiftScheduleZone(profile, schedule));
+        const now = new Date();
+        if (now < bounds.start) return 'Swipe to start';
+        if (now < bounds.end) return 'Swipe to end';
+      } catch {
+        return 'Swipe to confirm finished';
+      }
+      return 'Swipe to confirm finished';
+    }
     function confirmationBlockReason() {
       const date = currentDate();
       const schedule = currentSchedule();
@@ -868,7 +883,7 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
       knob.style.transition = 'none';
       knob.style.left = '4px';
       dragOffset = 0;
-      swipeLabel.textContent = 'Swipe to confirm finished';
+      swipeLabel.textContent = currentSwipePrompt();
       confirmStatus.textContent = '';
     }
 
@@ -935,11 +950,6 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
 
     function beginDrag(event) {
       if (completed || savingConfirmation) return;
-      const blockedReason = confirmationBlockReason();
-      if (blockedReason) {
-        showConfirmationBlock(blockedReason);
-        return;
-      }
       dragging = true;
       dragStartX = event.clientX;
       knob?.setPointerCapture?.(event.pointerId);
@@ -1016,7 +1026,10 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
 
     function tickDashboard() {
       if (destroyed || dashboardGeneration !== viewGeneration || !host.isConnected) return;
-      if (currentProfile && currentProfile.id !== profile.id) return;
+      const liveProfile = store.getProfile(profile.id) || profile;
+      if (currentProfile && currentProfile.id !== liveProfile.id) return;
+      profile = liveProfile;
+      currentProfile = liveProfile;
       const now = new Date();
       const clocks = {
         clockUganda: TZ.uganda,
@@ -1027,13 +1040,13 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
         const element = host.querySelector(`#${id}`);
         if (element) element.textContent = formatClock(now, zone);
       }
-      renderNextSchedule(host, profile, now);
+      renderNextSchedule(host, liveProfile, now);
       if (!manuallySelectedScheduleDate && dateInput && !dateInput.disabled) {
-        const selected = dateInput.value ? profile.schedules[dateInput.value] : null;
+        const selected = dateInput.value ? liveProfile.schedules[dateInput.value] : null;
         if (selected) {
           try {
-            if (getShiftBounds(dateInput.value, selected, shiftScheduleZone(profile, selected)).end <= now) {
-              const next = nextScheduledShift(profile, now);
+            if (getShiftBounds(dateInput.value, selected, shiftScheduleZone(liveProfile, selected)).end <= now) {
+              const next = nextScheduledShift(liveProfile, now);
               if (next && next.date !== dateInput.value) {
                 dateInput.value = next.date;
                 restoreConfirmation();
@@ -1045,8 +1058,8 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
           }
         }
       }
-      renderContract(host, profile, now);
-      renderShift(host, profile, now);
+      renderContract(host, liveProfile, now);
+      renderShift(host, liveProfile, now);
     }
 
     restoreConfirmation();
@@ -1336,6 +1349,12 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
   if (workerMode && Object.keys(workerIdsByProfileId).length) {
     const profileIds = Object.keys(workerIdsByProfileId);
     for (const profileId of profileIds) void onResumeSync(profileId, workerIdsByProfileId[profileId]).catch(() => {});
+    workerRefreshHandle = setInterval(() => {
+      if (document.hidden || !navigator.onLine) return;
+      for (const profileId of profileIds) {
+        void onResumeSync(profileId, workerIdsByProfileId[profileId]).catch(() => {});
+      }
+    }, 60_000);
     syncVisibilityHandler = () => {
       if (!document.hidden) {
         for (const profileId of profileIds) void onResumeSync(profileId, workerIdsByProfileId[profileId]).catch(() => {});
@@ -1361,6 +1380,7 @@ export async function initApp({ store, storageLabel = 'device storage', workerMo
       stopTicker();
       if (syncVisibilityHandler) document.removeEventListener('visibilitychange', syncVisibilityHandler);
       if (syncOnlineHandler) window.removeEventListener('online', syncOnlineHandler);
+      if (workerRefreshHandle) clearInterval(workerRefreshHandle);
       currentProfile = null;
       currentHost?.replaceChildren();
     }

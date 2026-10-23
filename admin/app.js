@@ -252,11 +252,11 @@ async function loadDashboard() {
   if (workerIds.length) {
     const [scheduleResult, ruleResult] = await Promise.all([
       supabase.from('shift_schedules')
-        .select('id,worker_id,shift_date,start_time,end_time,schedule_timezone,schedule_kind,revision')
+        .select('id,worker_id,shift_date,start_time,end_time,schedule_timezone,schedule_kind,revision,updated_at')
         .in('worker_id', workerIds)
         .order('shift_date'),
       supabase.from('shift_daily_rules')
-        .select('id,worker_id,effective_from,effective_until,start_time,end_time,schedule_timezone,revision')
+        .select('id,worker_id,effective_from,effective_until,start_time,end_time,schedule_timezone,revision,updated_at')
         .in('worker_id', workerIds)
     ]);
     if (scheduleResult.error) throw scheduleResult.error;
@@ -306,7 +306,7 @@ function renderWorkers() {
           <button class="button primary" type="submit">${rule ? 'Save daily shift' : 'Set daily shift'}</button>
           ${rule ? `<button class="button quiet" data-action="remove-daily-rule" data-worker-id="${escapeHtml(worker.id)}" type="button">Stop repeating</button>` : ''}
         </form>
-        <p class="schedule-help">A saved shift or day-off exception below overrides the daily shift for that date only.</p>
+        <p class="schedule-help">The latest admin change applies: older date entries inside a newly saved repeat are superseded. Date entries saved afterward override the repeat for that date.</p>
         <form class="schedule-form" data-schedule-form="${escapeHtml(worker.id)}">
           <label>Shift date<input name="shift_date" type="date" required></label>
           <label>Exception type<select name="schedule_kind"><option value="shift">Different shift</option><option value="off">Day off</option></select></label>
@@ -316,8 +316,13 @@ function renderWorkers() {
         </form>
         <div class="schedule-items">${workerSchedules.length ? workerSchedules.map((item) => {
           const isPast = item.shift_date < today;
+          const isSuperseded = Boolean(rule?.updated_at && item.updated_at
+            && item.shift_date >= rule.effective_from
+            && (!rule.effective_until || item.shift_date <= rule.effective_until)
+            && Date.parse(rule.updated_at) > Date.parse(item.updated_at));
           const details = item.schedule_kind === 'off' ? 'Day off' : `${escapeHtml(formatTime(item.start_time))}–${escapeHtml(formatTime(item.end_time))}`;
-          return `<span class="schedule-chip${isPast ? ' past' : ''}">${escapeHtml(formatDate(item.shift_date))} · ${details}${isPast ? '<span class="schedule-status">Past</span>' : ''}<button type="button" aria-label="Remove date exception" data-action="delete-schedule" data-schedule-id="${escapeHtml(item.id)}">×</button></span>`;
+          const stateLabel = isSuperseded ? '<span class="schedule-status">Repeat applies</span>' : isPast ? '<span class="schedule-status">Past</span>' : '';
+          return `<span class="schedule-chip${isPast ? ' past' : ''}">${escapeHtml(formatDate(item.shift_date))} · ${details}${stateLabel}<button type="button" aria-label="Remove date exception" data-action="delete-schedule" data-schedule-id="${escapeHtml(item.id)}">×</button></span>`;
         }).join('') : '<span class="muted small">No date-specific changes</span>'}</div>
       </div><div data-activation-result="${escapeHtml(worker.id)}"></div></div></details>`;
   }).join('');
@@ -550,7 +555,7 @@ async function saveDailyRule(workerId, form, button) {
     const { error } = result;
     if (error) throw error;
     await loadDashboard();
-    showNotice('Daily repeating shift saved. Date-specific changes still take precedence.', 'success');
+    showNotice('Daily repeating shift saved. Older date entries in its range are superseded; newer date changes still apply.', 'success');
   } catch (error) {
     showNotice(`Could not save daily shift: ${error.message || error}`, 'error');
   } finally {

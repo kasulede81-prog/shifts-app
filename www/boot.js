@@ -157,7 +157,18 @@ async function startDashboard() {
       workerMode: true,
       workerIdsByProfileId,
       syncActorId: session.user.id,
-      onResumeSync: syncSwiperConfirmations,
+      onResumeSync: async (profileId, workerId) => {
+        const latestContext = await loadShiftSwiperData();
+        const latestAccount = latestContext?.accounts.find(({ worker }) => worker.id === workerId);
+        if (latestAccount) {
+          await applicationStore.syncRemoteWorker(
+            latestAccount.worker,
+            latestAccount.schedules,
+            latestAccount.dailyRule
+          );
+        }
+        await syncSwiperConfirmations(applicationStore, profileId, workerId);
+      },
       onSignOut: async () => {
         try {
           await signOutShiftWorker();

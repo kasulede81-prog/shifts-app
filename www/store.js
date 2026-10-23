@@ -505,6 +505,17 @@ export class ProfileStore {
         }
       }
       for (const row of scheduleRows) {
+        // A daily-rule edit made after an older date row supersedes that row.
+        // Rows saved later remain deliberate date-specific overrides. Preserve
+        // legacy rows without timestamps as overrides because their age is unknown.
+        if (dailyRule?.updated_at && row.updated_at) {
+          const ruleUpdatedAt = Date.parse(dailyRule.updated_at);
+          const rowUpdatedAt = Date.parse(row.updated_at);
+          const ruleAppliesOnDate = (!dailyRule.effective_from || row.shift_date >= dailyRule.effective_from)
+            && (!dailyRule.effective_until || row.shift_date <= dailyRule.effective_until);
+          if (ruleAppliesOnDate && Number.isFinite(ruleUpdatedAt) && Number.isFinite(rowUpdatedAt)
+            && ruleUpdatedAt > rowUpdatedAt) continue;
+        }
         if (row.schedule_kind === 'off') {
           delete schedules[row.shift_date];
         } else {
