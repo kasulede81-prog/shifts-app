@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#182a45">
+  <meta name="description" content="DKASU shift administration">
+  <title>DKASU Shift Admin</title>
+  <link rel="stylesheet" href="./app.css">
+  <link rel="stylesheet" href="./import.css">
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <main class="page">
+    <header class="topbar">
+      <a class="brand" href="/">DKASU <span>SHIFT ADMIN</span></a>
+      <div id="accountBar" class="account-bar hidden">
+        <span id="accountEmail"></span>
+        <button id="signOutButton" class="button quiet" type="button">Sign out</button>
+      </div>
+    </header>
+
+    <div id="notice" class="notice hidden" role="status" aria-live="polite"></div>
+
+    <section id="loginPanel" class="card login-card">
+      <p class="eyebrow">DKASU · TEAM SCHEDULES</p>
+      <h1>Shift administration</h1>
+      <p class="muted">Sign in with the Google account authorized to manage DKASU worker profiles and schedules.</p>
+      <button id="googleButton" class="button primary wide" type="button">Continue with Google</button>
+      <p id="configHelp" class="muted small hidden">Add the public Supabase URL and anon key to the local environment to enable sign-in.</p>
+    </section>
+
+    <section id="notAdminPanel" class="card hidden">
+      <p class="eyebrow">ACCOUNT CHECK</p>
+      <h1>Admin access is not set up</h1>
+      <p class="muted">You signed in successfully, but this Google account is not listed as a DKASU shift admin. An authorized project owner must add it to the shift admin list.</p>
+    </section>
+
+    <section id="adminPanel" class="hidden">
+      <div class="intro dashboard-intro">
+        <div class="dashboard-intro-copy">
+          <p class="eyebrow">DKASU · ONE COMPANY</p>
+          <h1 id="adminPageTitle">Accounts and schedules</h1>
+        </div>
+        <div class="admin-menu-wrap">
+          <button id="adminMenuToggle" class="admin-menu-toggle" type="button" aria-label="Open admin sections" aria-expanded="false" aria-controls="adminMenu"><span></span><span></span><span></span></button>
+          <nav id="adminMenu" class="admin-menu hidden" aria-label="Admin sections">
+            <button type="button" data-admin-page-link="accounts" aria-current="page"><span>01</span> Accounts and schedules</button>
+            <button type="button" data-admin-page-link="operators"><span>02</span> Operators</button>
+            <button type="button" data-admin-page-link="confirmations"><span>03</span> Shift confirmations</button>
+            <button type="button" data-admin-page-link="setup"><span>04</span> Add swipe accounts</button>
+          </nav>
+        </div>
+      </div>
+
+      <section class="admin-view" data-admin-page="accounts">
+      <div class="dashboard-grid">
+      <section class="section-block card dashboard-window workers-window">
+        <div class="section-heading"><div><p class="eyebrow">SWIPE ACCOUNTS</p><h2>Accounts and schedules</h2></div><button id="refreshButton" class="button quiet" type="button">Refresh</button></div>
+        <label class="list-search"><span>Find a swipe account</span><input id="workerSearch" type="search" placeholder="Search name, email, profile ID…" autocomplete="off"><span id="workerSearchEmpty" class="search-empty hidden" aria-live="polite">No matching swipe accounts.</span></label>
+        <div id="workerList" class="worker-list"></div>
+      </section>
+      </div>
+      </section>
+
+      <section class="admin-view hidden" data-admin-page="operators">
+      <div class="dashboard-grid">
+      <section class="section-block card dashboard-window swipe-window">
+        <div class="window-heading"><span class="window-icon" aria-hidden="true">↗</span><div><p class="eyebrow">APP OPERATORS</p><h2>People who swipe</h2></div></div>
+        <button id="toggleSwiperFormButton" class="button quiet toggle-form-button" type="button" aria-expanded="false" aria-controls="swiperForm">Add operator</button>
+        <form id="swiperForm" class="form-grid compact-form hidden">
+          <label>Operator name<input name="name" required maxlength="160" autocomplete="name"></label>
+          <label>Operator Google email<input name="email" type="email" required maxlength="320" autocomplete="email"></label>
+          <div class="form-actions"><button class="button primary" type="submit">Add swiper</button></div>
+        </form>
+        <label class="list-search"><span>Find an operator</span><input id="swiperSearch" type="search" placeholder="Search operator name or email…" autocomplete="off"><span id="swiperSearchEmpty" class="search-empty hidden" aria-live="polite">No matching operators.</span></label>
+        <div id="swipeWorkerList" class="swipe-worker-list"></div>
+      </section>
+      </div>
+      </section>
+
+      <section class="admin-view hidden" data-admin-page="confirmations">
+      <div class="dashboard-grid">
+      <section class="section-block card dashboard-window confirmations-window">
+        <p class="eyebrow">SWIPER SELF-REPORTS</p>
+        <h2>Shift confirmations</h2>
+        <label class="list-search"><span>Find a confirmation</span><input id="confirmationSearch" type="search" placeholder="Search account, operator, or date…" autocomplete="off"><span id="confirmationSearchEmpty" class="search-empty hidden" aria-live="polite">No matching confirmations.</span></label>
+        <div id="confirmationList" class="confirmation-list"></div>
+      </section>
+      </div>
+      </section>
+
+      <section class="admin-view hidden" data-admin-page="setup">
+      <div class="dashboard-grid">
+      <section class="card dashboard-window import-window">
+        <div class="window-heading"><span class="window-icon" aria-hidden="true">↥</span><div><p class="eyebrow">SWIPE ACCOUNT SETUP</p><h2>Import swipe account</h2></div></div>
+        <form id="workerImportForm" class="form-grid">
+          <label>Swipe account package (.json)<input id="workerPackageInput" name="package" type="file" accept=".json,application/json" required></label>
+          <div id="workerImportPreview" class="import-preview hidden" role="status" aria-live="polite"></div>
+          <div class="form-actions"><button id="importPackageButton" class="button primary" type="submit" disabled>Upload profile to DKASU</button></div>
+        </form>
+      </section>
+
+      <section class="card dashboard-window manual-window">
+        <div class="window-heading"><span class="window-icon" aria-hidden="true">＋</span><div><p class="eyebrow">SWIPE ACCOUNT SETUP</p><h2>Manual entry</h2></div></div>
+        <button id="toggleWorkerFormButton" class="button quiet" type="button" aria-expanded="false" aria-controls="workerForm">Add worker manually</button>
+        <form id="workerForm" class="form-grid hidden">
+          <label>Swipe account name<input name="name" required maxlength="160" autocomplete="name"></label>
+          <label>Swipe account email<input name="email" type="email" required maxlength="320" autocomplete="email"></label>
+          <label>Ogram profile ID<input name="ogram_profile_id" maxlength="120"></label>
+          <label>Swipe ID<input name="swipe_id" maxlength="120"></label>
+          <label>Job title<input name="job_title" maxlength="120"></label>
+          <label>Company name<input name="company_name" maxlength="160" value="DKASU"></label>
+          <label>Work location<input name="location" maxlength="160"></label>
+          <label>Address<input name="address" maxlength="500"></label>
+          <label>Contract starts<input name="contract_start" type="date"></label>
+          <label>Contract ends<input name="contract_end" type="date"></label>
+          <label>Display time zone<input name="display_timezone" maxlength="80" value="Asia/Dubai"></label>
+          <label>Schedule time zone<input name="schedule_timezone" maxlength="80" value="Asia/Dubai"></label>
+          <div class="form-actions"><button class="button primary" type="submit">Add swipe account</button></div>
+        </form>
+      </section>
+      </div>
+      </section>
+    </section>
+  </main>
+</body>
+</html>

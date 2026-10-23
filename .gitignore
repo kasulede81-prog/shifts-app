@@ -1,4 +1,14 @@
 node_modules/
 dist/
-android/
+dist-admin/
+.env*
+!.env.example
 .DS_Store
+artifacts/*.apk
+artifacts/
+work/
+admin/work/
+www/work/
+android/.idea/
+supabase/.temp/
+.vercel/

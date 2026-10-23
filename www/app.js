@@ -1,503 +1,1267 @@
-const TZ={ug:"Africa/Kampala",dubai:"Asia/Dubai",italy:"Europe/Rome"};
-const zoneNames={"Africa/Kampala":"Uganda","Asia/Dubai":"Dubai","Europe/Rome":"Italy / Europe"};
-const shiftStartHour=6, shiftEndHour=16;
-const SHIFT_TIME_ZONE="Asia/Dubai"; // Schedule is interpreted in Dubai local time; display can be converted.
-// Contract dates are the Dubai-local dates shown in the screenshots.
-const knownShiftDates=new Set(["2026-10-15","2026-10-16","2026-10-17","2026-10-18","2026-10-19","2026-10-22"]);
-const timezoneSelect=document.getElementById("primaryTimezone");
-try{const savedZone=localStorage.getItem("ogramDashboardTimezone:AndrewWamani:ID432384");if(savedZone&&zoneNames[savedZone])timezoneSelect.value=savedZone;}catch(_){}
-function primaryZone(){return timezoneSelect.value;}
-// Convert a wall-clock date/time in an IANA zone to an absolute instant, including DST.
-function zonedDateTime(y,m,d,h=0,min=0,sec=0,zone=primaryZone()){
- const target=Date.UTC(y,m-1,d,h,min,sec);let guess=target;
- for(let i=0;i<4;i++){
-  const p=partsInZone(new Date(guess),zone);
-  const represented=Date.UTC(+p.year,+p.month-1,+p.day,+p.hour,+p.minute,+p.second);
-  guess+=target-represented;
- }
- return new Date(guess);
-}
-function contractBounds(){
- // Contract begins and ends on the Dubai-local calendar dates in the screenshot.
- return {start:zonedDateTime(2026,10,15,0,0,0,"Asia/Dubai"),end:zonedDateTime(2026,12,16,0,0,0,"Asia/Dubai")-1};
-}
-function partsInZone(date,zone){const parts=new Intl.DateTimeFormat("en-GB",{timeZone:zone,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"}).formatToParts(date);return Object.fromEntries(parts.filter(p=>p.type!=="literal").map(p=>[p.type,p.value]));}
-function clock(date,zone){return new Intl.DateTimeFormat("en-GB",{timeZone:zone,hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).format(date);}
-function dateLabel(date,zone){return new Intl.DateTimeFormat("en-GB",{timeZone:zone,day:"numeric",month:"short",year:"numeric"}).format(date);}
-function fmtDuration(ms){let s=Math.max(0,Math.floor(ms/1000));const d=Math.floor(s/86400);s%=86400;const h=Math.floor(s/3600);s%=3600;const m=Math.floor(s/60);s%=60;if(d>0)return `${d}d ${h}h`;if(h>0)return `${h}h ${m}m`;return `${m}m ${s}s`;}
-function update(){
- const now=new Date();
- document.getElementById("clockUganda").textContent=clock(now,TZ.ug);
- document.getElementById("clockDubai").textContent=clock(now,TZ.dubai);
- document.getElementById("clockItaly").textContent=clock(now,TZ.italy);
- const zone=primaryZone(), bounds=contractBounds(), contractStart=bounds.start, contractEnd=bounds.end;
- const total=contractEnd-contractStart, elapsed=now-contractStart;
- const days=Math.max(0,Math.ceil((contractEnd-now)/86400000));
- document.getElementById("daysRemaining").textContent=now<contractStart?Math.ceil((contractStart-now)/86400000)+" days to start":now>=contractEnd?"0 days":days+" days";
- document.getElementById("contractStatus").textContent=now<contractStart?"Not started":now>=contractEnd?"Contract ended":"Until "+dateLabel(contractEnd,zone);
- const pct=Math.min(100,Math.max(0,elapsed/total*100));
- document.getElementById("progress").textContent=Math.round(pct)+"%";
- document.getElementById("contractDates").textContent="Contract dates (Dubai-local contract dates, shown in "+zoneNames[zone]+" time): "+dateLabel(contractStart,zone)+" – "+dateLabel(contractEnd,zone);
- document.getElementById("timezoneSelected").textContent="Dashboard uses "+zoneNames[zone]+" time";
- document.getElementById("shiftHoursTitle").textContent="Shift hours ("+zoneNames[zone]+")";
- updateShift(now);
-}
-function updateShift(now){
- const input=document.getElementById("shiftDate").value||"2026-10-22";
- const [y,m,d]=input.split("-").map(Number);
- const displayZone=primaryZone();
- const el=document.getElementById("shiftCountdown"), status=document.getElementById("shiftStatus");
- const hoursValue=document.querySelector("#shiftHoursTitle + .value");
- if(!knownShiftDates.has(input)){
-  el.textContent="Not confirmed";status.textContent="Check Ogram schedule";
-  document.getElementById("shiftHoursTitle").textContent="Shift hours (not confirmed)";
-  hoursValue.textContent="—";
-  document.getElementById("selectedDateNote").textContent="Selected date: "+input+". The screenshots do not confirm this date’s shift hours, so no countdown is shown. Check Ogram before relying on a shift time.";
-  return;
- }
- // The schedule's date and wall-clock hours are interpreted in Dubai, then displayed in the chosen zone.
- const start=zonedDateTime(y,m,d,shiftStartHour,0,0,SHIFT_TIME_ZONE);
- const end=zonedDateTime(y,m,d,shiftEndHour,0,0,SHIFT_TIME_ZONE);
- document.getElementById("shiftHoursTitle").textContent="Shift hours ("+zoneNames[displayZone]+")";
- hoursValue.textContent=clock(start,displayZone)+"–"+clock(end,displayZone);
- if(now<start){el.textContent=fmtDuration(start-now);status.textContent="Until shift starts";}
- else if(now<end){el.textContent=fmtDuration(end-now);status.textContent="Time until shift ends";}
- else{el.textContent="Shift window ended";status.textContent="Confirm attendance in Ogram if required";}
- document.getElementById("selectedDateNote").textContent="Selected shift date: "+input+" (Dubai schedule). Displayed as "+clock(start,displayZone)+"–"+clock(end,displayZone)+" in "+zoneNames[displayZone]+" time. Verify attendance in Ogram.";
-}
-document.getElementById("shiftDate").addEventListener("change",()=>{window.dispatchEvent(new Event("ogram-shift-date-changed"));update();});
-timezoneSelect.addEventListener("change",()=>{try{localStorage.setItem("ogramDashboardTimezone:AndrewWamani:ID432384",timezoneSelect.value)}catch(_){};update();});
-document.getElementById("copyAddress").addEventListener("click",async()=>{
- const address="Dubai Festival City Mall - Crescent Rd - Dubai", status=document.getElementById("copyStatus");
- const confirmPanel=document.getElementById("endShiftConfirmation");
- try{await navigator.clipboard.writeText(address);status.textContent="Address copied!";confirmPanel.classList.add("show");}
- catch(e){const t=document.createElement("textarea");t.value=address;t.readOnly=true;t.style.position="fixed";t.style.opacity="0";document.body.appendChild(t);t.select();let ok=false;try{ok=document.execCommand("copy")}catch(_){}t.remove();status.textContent=ok?"Address copied!":"Press and hold the address text to select and copy it.";if(ok)confirmPanel.classList.add("show");}
-});
-// Local-only, date-specific swipe confirmation. It never communicates with Ogram.
-const confirmationBaseKey="ogramShiftSelfConfirmation:AndrewWamani:ID432384:";
-function selectedShiftDate(){return document.getElementById("shiftDate").value||"2026-10-22";}
-function confirmationKey(){return confirmationBaseKey+selectedShiftDate();}
-function resetSwipeVisual(){
- const track=document.getElementById("swipeTrack"), knob=document.getElementById("swipeKnob"), label=document.getElementById("swipeLabel"), status=document.getElementById("endShiftStatus");
- track.classList.remove("done");label.textContent="Swipe to confirm finished";knob.textContent="›";knob.style.transition="none";knob.style.left="4px";status.textContent="";
-}
-function restoreSavedForSelectedDate(){
- const track=document.getElementById("swipeTrack"), knob=document.getElementById("swipeKnob"), label=document.getElementById("swipeLabel"), status=document.getElementById("endShiftStatus");
- resetSwipeVisual();
- try{
-  const saved=JSON.parse(localStorage.getItem(confirmationKey())||"null");
-  if(!saved)return false;
-  track.classList.add("done");label.textContent="This shift is self-confirmed";knob.textContent="✓";
-  requestAnimationFrame(()=>{knob.style.left=Math.max(4,track.clientWidth-knob.offsetWidth-4)+"px";});
-  const stamp=saved.confirmedAt?new Date(saved.confirmedAt):null;
-  status.textContent="Saved self-confirmation for "+selectedShiftDate()+": "+(stamp?new Intl.DateTimeFormat("en-GB",{timeZone:saved.timezone||primaryZone(),dateStyle:"medium",timeStyle:"medium"}).format(stamp):"timestamp unavailable")+". Local only; Ogram is unchanged.";
-  return true;
- }catch(_){
-  status.textContent="This browser could not read the saved confirmation. It may not be stored on this device.";
-  return false;
- }
-}
-function resetSwipeForSelectedDate(){restoreSavedForSelectedDate();}
-(()=>{
- const track=document.getElementById("swipeTrack"), knob=document.getElementById("swipeKnob"), label=document.getElementById("swipeLabel"), status=document.getElementById("endShiftStatus");
- let dragging=false,startX=0,offset=0,completed=false;
- const max=()=>Math.max(0,track.clientWidth-knob.offsetWidth-8);
- function loadState(){completed=restoreSavedForSelectedDate();offset=completed?max():0;}
- function paint(x){offset=Math.max(0,Math.min(max(),x));knob.style.left=(4+offset)+"px";}
- loadState();
- window.addEventListener("ogram-shift-date-changed",loadState);
- function begin(e){if(completed)return;dragging=true;startX=e.clientX;knob.setPointerCapture?.(e.pointerId);}
- function move(e){
-  if(!dragging)return;
-  paint(offset+(e.clientX-startX));startX=e.clientX;
-  if(offset>=max()*0.82){
-   completed=true;dragging=false;paint(max());track.classList.add("done");label.textContent="Shift confirmed in this page";knob.textContent="✓";
-   const stamp=new Date();
-   status.textContent="Self-confirmed for "+selectedShiftDate()+" at "+new Intl.DateTimeFormat("en-GB",{timeZone:primaryZone(),dateStyle:"medium",timeStyle:"medium"}).format(stamp)+" ("+zoneNames[primaryZone()]+" time). Ogram is unchanged.";
-   try{
-    localStorage.setItem(confirmationKey(),JSON.stringify({shiftDate:selectedShiftDate(),confirmedAt:stamp.toISOString(),timezone:primaryZone(),address:"Dubai Festival City Mall - Crescent Rd - Dubai"}));
-   }catch(_){
-    status.textContent="Confirmation shown for this session, but browser storage failed. It may not persist after closing this page. Ogram is unchanged.";
-   }
-  }
- }
- function end(){if(!dragging)return;dragging=false;if(!completed){offset=0;knob.style.transition="left .18s ease";paint(0);setTimeout(()=>knob.style.transition="",200);}}
- knob.addEventListener("pointerdown",begin);knob.addEventListener("pointermove",move);knob.addEventListener("pointerup",end);knob.addEventListener("pointercancel",end);
- window.addEventListener("resize",()=>{if(completed)paint(max());});
-})();
-update();setInterval(update,1000);
+import { Capacitor } from '@capacitor/core';
+import { Directory, Encoding, Filesystem } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
+import {
+  MAX_BACKUP_CHARS,
+  ValidationError,
+  createBackup,
+  createWorkerProfilePackage,
+  parseBackupText,
+  parseWorkerProfilePackageText,
+  profileFromForm,
+  schedulesToText
+} from './domain.js';
+import {
+  TIME_ZONE_NAMES,
+  TZ,
+  formatClock,
+  formatDateTime,
+  formatDuration,
+  getContractBounds,
+  getShiftBounds
+} from './time.js';
 
-// Installed PWA support: request persistent origin storage where the browser permits it.
-(async()=>{
- const status=document.getElementById("storageStatus");
- try {
-  if (navigator.storage && navigator.storage.persist) {
-   const already=await navigator.storage.persisted();
-   const granted=already || await navigator.storage.persist();
-   status.textContent=granted
-    ? "Persistent storage is enabled for this installed dashboard on this device. Keep a backup as extra protection."
-    : "The browser did not grant persistent-storage protection. Data usually remains, but the browser may clear it; export a backup.";
+function pad(value) {
+  return String(value).padStart(2, '0');
+}
+
+function prettyDateKey(dateKey) {
+  const [year, month, day] = dateKey.split('-').map(Number);
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'UTC',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric'
+  }).format(new Date(Date.UTC(year, month - 1, day, 12)));
+}
+
+function errorMessage(error) {
+  return error?.message || String(error);
+}
+
+function backupFilename(now = new Date()) {
+  const stamp = `${now.getUTCFullYear()}-${pad(now.getUTCMonth() + 1)}-${pad(now.getUTCDate())}_${pad(now.getUTCHours())}${pad(now.getUTCMinutes())}${pad(now.getUTCSeconds())}`;
+  return `DKASU_Shift_Backup_${stamp}.json`;
+}
+
+function workerProfileFilename(profile, now = new Date()) {
+  const stamp = `${now.getUTCFullYear()}-${pad(now.getUTCMonth() + 1)}-${pad(now.getUTCDate())}`;
+  const safeName = profile.name.normalize('NFKD').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 50) || 'Worker';
+  return `DKASU_Worker_Profile_${safeName}_${stamp}.json`;
+}
+
+async function copyText(text) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  const area = document.createElement('textarea');
+  area.value = text;
+  area.readOnly = true;
+  area.style.position = 'fixed';
+  area.style.opacity = '0';
+  document.body.appendChild(area);
+  area.select();
+  let copied = false;
+  try {
+    copied = document.execCommand('copy');
+  } catch {
+    copied = false;
+  }
+  area.remove();
+  if (!copied) throw new Error('Clipboard access is blocked.');
+}
+
+function setButtonBusy(button, busy, busyLabel) {
+  if (!button.dataset.idleLabel) button.dataset.idleLabel = button.textContent;
+  button.disabled = busy;
+  button.textContent = busy ? busyLabel : button.dataset.idleLabel;
+}
+
+export async function initApp({ store, storageLabel = 'device storage', workerMode = false, workerIdsByProfileId = {}, syncActorId = '', onSignOut = () => {}, onResumeSync = async () => {} }) {
+  if (!store) throw new Error('A loaded profile store is required.');
+  store.workerMode = workerMode;
+  const dashboardTemplate = document.getElementById('dashboardTemplate');
+  const activeProfileView = document.getElementById('activeProfileView');
+  const appRoot = document.getElementById('appRoot');
+  if (!dashboardTemplate || !activeProfileView || !appRoot) {
+    throw new Error('The dashboard markup is incomplete.');
+  }
+  appRoot.style.display = 'block';
+  if (workerMode) {
+    document.getElementById('storagePanel')?.classList.add('hidden');
+    const pickerTitle = document.querySelector('#profilePicker h2');
+    const pickerHelp = document.getElementById('profilePickerHelp');
+    const roleNotice = document.getElementById('profilePickerRoleNotice');
+    if (pickerTitle) pickerTitle.textContent = 'Choose a swipe account';
+    if (pickerHelp) pickerHelp.textContent = 'Choose one of the swipe accounts assigned to you by the DKASU admin. Your confirmation will identify both you and this account.';
+    if (roleNotice) roleNotice.classList.add('hidden');
+    for (const id of ['profilesTopButton', 'addTopButton', 'addProfileButton', 'backupButton', 'editActiveButton', 'deleteActiveButton']) {
+      const element = document.getElementById(id);
+      if (element) element.style.display = 'none';
+    }
+    const switchProfileButton = document.getElementById('switchProfileButton');
+    if (switchProfileButton) {
+      switchProfileButton.style.display = store.listProfiles().length > 1 ? 'inline-block' : 'none';
+      switchProfileButton.textContent = 'Choose another swipe account';
+    }
+    const signOutButton = document.getElementById('workerSignOutButton');
+    if (signOutButton) signOutButton.style.display = 'inline-block';
+    const securityButton = document.getElementById('securityTopButton');
+    if (securityButton) securityButton.style.display = 'inline-block';
+  }
+
+  const refs = {
+    appMessage: document.getElementById('appMessage'),
+    profilePicker: document.getElementById('profilePicker'),
+    profileList: document.getElementById('profileList'),
+    profileEditor: document.getElementById('profileEditor'),
+    editorTitle: document.getElementById('editorTitle'),
+    editorError: document.getElementById('editorError'),
+    backupPanel: document.getElementById('backupPanel'),
+    backupStatus: document.getElementById('backupStatus'),
+    activeProfilePanel: document.getElementById('activeProfilePanel'),
+    storageStatus: document.getElementById('storageStatus'),
+    addProfileButton: document.getElementById('addProfileButton'),
+    addTopButton: document.getElementById('addTopButton'),
+    saveProfileButton: document.getElementById('saveProfileButton'),
+    cancelEditorButton: document.getElementById('cancelEditorButton'),
+    deleteActiveButton: document.getElementById('deleteActiveButton'),
+    backupButton: document.getElementById('backupButton'),
+    backFromBackupButton: document.getElementById('backFromBackupButton'),
+    exportBackupButton: document.getElementById('exportBackupButton'),
+    importBackupButton: document.getElementById('importBackupButton'),
+    backupFileInput: document.getElementById('backupFileInput'),
+    profileExportSelect: document.getElementById('profileExportSelect'),
+    exportWorkerProfileButton: document.getElementById('exportWorkerProfileButton'),
+    importWorkerProfileButton: document.getElementById('importWorkerProfileButton'),
+    workerProfileFileInput: document.getElementById('workerProfileFileInput')
+  };
+
+  let currentProfile = null;
+  let currentHost = null;
+  let resumeCurrentDashboard = null;
+  let tickHandle = null;
+  let editingProfileId = null;
+  let openingProfile = false;
+  let destroyed = false;
+  let viewGeneration = 0;
+  let syncVisibilityHandler = null;
+  let syncOnlineHandler = null;
+
+  function byId(id) {
+    return document.getElementById(id);
+  }
+
+  function showOnly(panelId) {
+    for (const panelIdToToggle of ['profilePicker', 'profileEditor', 'backupPanel', 'securityPanel', 'activeProfilePanel']) {
+      byId(panelIdToToggle)?.classList.toggle('hidden', panelIdToToggle !== panelId);
+    }
+  }
+
+  function showAppMessage(text, tone = 'info') {
+    if (!refs.appMessage) return;
+    refs.appMessage.textContent = text;
+    refs.appMessage.classList.remove('hidden', 'error', 'success');
+    if (tone === 'error') refs.appMessage.classList.add('error');
+    if (tone === 'success') refs.appMessage.classList.add('success');
+  }
+
+  function clearAppMessage() {
+    refs.appMessage?.classList.add('hidden');
+    if (refs.appMessage) refs.appMessage.textContent = '';
+  }
+
+  function setStorageStatus(text) {
+    if (refs.storageStatus) refs.storageStatus.textContent = text;
+  }
+
+  function setBackupStatus(text, tone = 'info') {
+    if (!refs.backupStatus) return;
+    refs.backupStatus.textContent = text;
+    refs.backupStatus.className = 'notice';
+    if (tone === 'error') refs.backupStatus.classList.add('error');
+    if (tone === 'success') refs.backupStatus.classList.add('success');
+  }
+
+  function stopTicker() {
+    if (tickHandle !== null) {
+      clearInterval(tickHandle);
+      tickHandle = null;
+    }
+  }
+
+  function updateMutationControls() {
+    const disabled = store.readOnly;
+    if (refs.addProfileButton) refs.addProfileButton.disabled = disabled;
+    if (refs.addTopButton) refs.addTopButton.disabled = disabled;
+    if (refs.importWorkerProfileButton) refs.importWorkerProfileButton.disabled = disabled;
+  }
+
+  function renderProfileList() {
+    if (!refs.profileList) return;
+    refs.profileList.replaceChildren();
+    const profiles = store.listProfiles();
+    const activeId = store.getActiveProfileId();
+    if (!profiles.length) {
+      const empty = document.createElement('p');
+      empty.textContent = store.readOnly
+        ? 'Stored profiles could not be read. Use Backup / Restore to load a valid backup.'
+        : 'No profiles yet. Add a profile to begin.';
+      refs.profileList.appendChild(empty);
+      return;
+    }
+    for (const profile of profiles) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `profile-choice${profile.id === activeId ? ' active' : ''}`;
+      button.dataset.profileId = profile.id;
+
+      const avatar = document.createElement('div');
+      avatar.className = 'avatar';
+      avatar.textContent = profile.name
+        .trim()
+        .split(/\s+/)
+        .map((part) => part[0] || '')
+        .join('')
+        .slice(0, 2)
+        .toUpperCase();
+
+      const meta = document.createElement('div');
+      meta.className = 'profile-meta';
+      const name = document.createElement('strong');
+      name.textContent = profile.name;
+      const details = document.createElement('span');
+      details.textContent = [profile.job, profile.email].filter(Boolean).join(' · ') || 'No job or email saved';
+      meta.append(name, details);
+
+      const chevron = document.createElement('span');
+      chevron.setAttribute('aria-hidden', 'true');
+      chevron.textContent = '›';
+
+      button.append(avatar, meta, chevron);
+      button.addEventListener('click', () => {
+        void openProfile(profile.id);
+      });
+      refs.profileList.appendChild(button);
+    }
+  }
+
+  function showProfilePicker({ message = '', tone = 'info', clearMessage = false } = {}) {
+    viewGeneration += 1;
+    stopTicker();
+    currentProfile = null;
+    if (clearMessage) clearAppMessage();
+    if (message) showAppMessage(message, tone);
+    renderProfileList();
+    updateMutationControls();
+    showOnly('profilePicker');
+  }
+
+  function fillEditor(profile) {
+    const fields = {
+      pName: profile?.name || '',
+      pEmail: profile?.email || '',
+      pProfileId: profile?.profileId || '',
+      pSwipeId: profile?.swipeId || '',
+      pJob: profile?.job || '',
+      pCompany: profile?.company || '',
+      pLocation: profile?.location || '',
+      pAddress: profile?.address || '',
+      pContractStart: profile?.contractStart || '',
+      pContractEnd: profile?.contractEnd || '',
+      pTimezone: profile?.displayZone || TZ.dubai,
+      pShiftZone: profile?.scheduleZone || TZ.dubai,
+      pSchedules: schedulesToText(profile?.schedules || {})
+    };
+    for (const [id, value] of Object.entries(fields)) {
+      const input = byId(id);
+      if (input) input.value = value;
+    }
+    if (refs.editorTitle) refs.editorTitle.textContent = profile ? 'Edit profile' : 'Add profile';
+    if (refs.editorError) refs.editorError.textContent = '';
+  }
+
+  function startAddProfile() {
+    if (store.readOnly) {
+      showAppMessage('Profile changes are disabled because stored data could not be read. Restore a backup first.', 'error');
+      return;
+    }
+    viewGeneration += 1;
+    stopTicker();
+    currentProfile = null;
+    editingProfileId = null;
+    clearAppMessage();
+    fillEditor(null);
+    showOnly('profileEditor');
+    byId('pName')?.focus();
+  }
+
+  function startEditProfile() {
+    if (!currentProfile) return;
+    if (store.readOnly) {
+      showAppMessage('Profile changes are disabled because stored data could not be read.', 'error');
+      return;
+    }
+    const profile = store.getProfile(currentProfile.id);
+    if (!profile) {
+      showAppMessage('That profile no longer exists.', 'error');
+      showProfilePicker();
+      return;
+    }
+    viewGeneration += 1;
+    stopTicker();
+    editingProfileId = profile.id;
+    clearAppMessage();
+    fillEditor(profile);
+    showOnly('profileEditor');
+    byId('pName')?.focus();
+  }
+
+  async function saveProfileEditor() {
+    if (!refs.saveProfileButton) return;
+    if (refs.saveProfileButton.disabled) return;
+    if (refs.editorError) refs.editorError.textContent = '';
+    let fields;
+    try {
+      fields = profileFromForm({
+        name: byId('pName')?.value,
+        email: byId('pEmail')?.value,
+        profileId: byId('pProfileId')?.value,
+        swipeId: byId('pSwipeId')?.value,
+        job: byId('pJob')?.value,
+        company: byId('pCompany')?.value,
+        location: byId('pLocation')?.value,
+        address: byId('pAddress')?.value,
+        contractStart: byId('pContractStart')?.value,
+        contractEnd: byId('pContractEnd')?.value,
+        displayZone: byId('pTimezone')?.value,
+        scheduleZone: byId('pShiftZone')?.value,
+        schedulesText: byId('pSchedules')?.value
+      });
+    } catch (error) {
+      if (refs.editorError) refs.editorError.textContent = errorMessage(error);
+      return;
+    }
+
+    setButtonBusy(refs.saveProfileButton, true, 'Saving…');
+    if (refs.cancelEditorButton) refs.cancelEditorButton.disabled = true;
+    try {
+      const profile = editingProfileId
+        ? await store.updateProfile(editingProfileId, fields)
+        : await store.createProfile(fields);
+      currentProfile = profile;
+      editingProfileId = null;
+      renderProfileList();
+      showOnly('activeProfilePanel');
+      renderDashboard(profile);
+      showAppMessage(`${profile.name} saved on this device.`, 'success');
+      setStorageStatus(`${profile.name} was saved successfully by profile.`);
+    } catch (error) {
+      if (refs.editorError) refs.editorError.textContent = `Not saved. ${errorMessage(error)}`;
+      setStorageStatus('The profile change was not saved to device storage.');
+    } finally {
+      setButtonBusy(refs.saveProfileButton, false);
+      if (refs.cancelEditorButton) refs.cancelEditorButton.disabled = false;
+    }
+  }
+
+  async function deleteActiveProfile() {
+    if (!currentProfile) return;
+    if (refs.deleteActiveButton?.disabled) return;
+    const profile = store.getProfile(currentProfile.id);
+    if (!profile) {
+      showProfilePicker({ message: 'That profile no longer exists.', tone: 'error' });
+      return;
+    }
+    const confirmed = globalThis.confirm(
+      `Delete ${profile.name}'s profile, schedules and local self-confirmations from this device?\n\nOnly this profile is deleted. Export a backup first if you may need it.`
+    );
+    if (!confirmed) return;
+    if (refs.deleteActiveButton) setButtonBusy(refs.deleteActiveButton, true, 'Deleting…');
+    try {
+      await store.deleteProfile(profile.id);
+      stopTicker();
+      currentProfile = null;
+      activeProfileView.replaceChildren();
+      showProfilePicker({
+        message: `${profile.name} was deleted. No other profile was changed.`,
+        tone: 'success'
+      });
+      setStorageStatus('Profile deletion was saved to device storage.');
+    } catch (error) {
+      showAppMessage(`Profile was not deleted. ${errorMessage(error)}`, 'error');
+    } finally {
+      if (refs.deleteActiveButton) setButtonBusy(refs.deleteActiveButton, false);
+    }
+  }
+
+  async function openProfile(id) {
+    if (openingProfile) return;
+    openingProfile = true;
+    const requestGeneration = viewGeneration + 1;
+    viewGeneration = requestGeneration;
+    stopTicker();
+    clearAppMessage();
+    try {
+      await store.selectProfile(id);
+      if (requestGeneration !== viewGeneration) return;
+      const profile = store.getProfile(id);
+      if (!profile) throw new Error('The profile no longer exists.');
+      currentProfile = profile;
+      renderProfileList();
+      showOnly('activeProfilePanel');
+      renderDashboard(profile);
+      setStorageStatus(`${profile.name}'s profile is open. Changes are written to device storage before success is shown.`);
+    } catch (error) {
+      if (requestGeneration === viewGeneration) {
+        showProfilePicker({
+          message: `Could not open that profile. ${errorMessage(error)}`,
+          tone: 'error'
+        });
+      }
+    } finally {
+      openingProfile = false;
+    }
+  }
+
+  function setText(host, selector, value) {
+    const element = host.querySelector(selector);
+    if (element) element.textContent = value;
+  }
+
+  function nextScheduledShift(profile, now = new Date()) {
+    const dates = Object.keys(profile.schedules).sort();
+    for (const date of dates) {
+      try {
+        if (getShiftBounds(date, profile.schedules[date], profile.scheduleZone).end > now) {
+          return { date, shift: profile.schedules[date] };
+        }
+      } catch {
+        // Keep invalid saved dates visible in the full list for review.
+      }
+    }
+    return null;
+  }
+
+  function renderNextSchedule(host, profile, now = new Date()) {
+    const preview = host.querySelector('#nextSchedule');
+    if (!preview) return;
+    preview.replaceChildren();
+    const next = nextScheduledShift(profile, now);
+    const row = document.createElement('div');
+    row.className = 'day next-day';
+    const left = document.createElement('div');
+    const title = document.createElement('strong');
+    const zone = document.createElement('div');
+    zone.className = 'next-zone';
+    const right = document.createElement('span');
+    if (next) {
+      title.textContent = `Next shift · ${prettyDateKey(next.date)}`;
+      zone.textContent = TIME_ZONE_NAMES[profile.scheduleZone];
+      right.textContent = `${next.shift.start}–${next.shift.end}${next.shift.end < next.shift.start ? ' (+1 day)' : ''}`;
+    } else {
+      title.textContent = 'No upcoming saved shift';
+      zone.textContent = 'Check with your admin for schedule updates';
+      right.textContent = '—';
+    }
+    left.append(title, zone);
+    row.append(left, right);
+    preview.appendChild(row);
+  }
+
+  function renderSchedule(host, profile) {
+    const list = host.querySelector('#savedSchedule');
+    if (!list) return;
+    list.replaceChildren();
+    const dates = Object.keys(profile.schedules).sort();
+    const allScheduleDetails = host.querySelector('#allScheduleDetails');
+    const allScheduleSummary = host.querySelector('#allScheduleSummary');
+    if (allScheduleSummary) allScheduleSummary.textContent = `View all saved shifts (${dates.length})`;
+    if (allScheduleDetails) allScheduleDetails.classList.toggle('hidden', dates.length <= 1);
+    renderNextSchedule(host, profile);
+    if (!dates.length) {
+      const empty = document.createElement('div');
+      empty.className = 'day';
+      const left = document.createElement('div');
+      const strong = document.createElement('strong');
+      strong.textContent = 'No shifts saved';
+      left.appendChild(strong);
+      const right = document.createElement('span');
+      right.textContent = 'Edit the profile to add confirmed dates';
+      empty.append(left, right);
+      list.appendChild(empty);
+      return;
+    }
+    for (const date of dates) {
+      const shift = profile.schedules[date];
+      const row = document.createElement('div');
+      row.className = 'day';
+      const left = document.createElement('div');
+      const dateLabel = document.createElement('strong');
+      dateLabel.textContent = prettyDateKey(date);
+      const zone = document.createElement('div');
+      zone.textContent = TIME_ZONE_NAMES[profile.scheduleZone];
+      left.append(dateLabel, zone);
+      const right = document.createElement('span');
+      const overnight = shift.end < shift.start;
+      right.textContent = `${shift.start} – ${shift.end}${overnight ? ' (+1 day)' : ''}`;
+      row.append(left, right);
+      list.appendChild(row);
+    }
+  }
+
+  function renderContract(host, profile, now) {
+    const daysElement = host.querySelector('#daysRemaining');
+    const statusElement = host.querySelector('#contractStatus');
+    const progressElement = host.querySelector('#progress');
+    const datesElement = host.querySelector('#contractDates');
+    if (!profile.contractStart || !profile.contractEnd) {
+      if (daysElement) daysElement.textContent = '—';
+      if (statusElement) statusElement.textContent = 'Add contract dates';
+      if (progressElement) progressElement.textContent = '—';
+      if (datesElement) datesElement.textContent = 'No contract dates are saved for this profile.';
+      return;
+    }
+    try {
+      const bounds = getContractBounds(profile.contractStart, profile.contractEnd, profile.scheduleZone);
+      const before = now < bounds.start;
+      const after = now >= bounds.endExclusive;
+      if (daysElement) {
+        if (before) {
+          daysElement.textContent = `${Math.ceil((bounds.start - now) / 86400000)} days`;
+        } else if (after) {
+          daysElement.textContent = '0 days';
+        } else {
+          daysElement.textContent = `${Math.ceil((bounds.endExclusive - now) / 86400000)} days`;
+        }
+      }
+      if (statusElement) {
+        statusElement.textContent = before
+          ? 'Not started'
+          : after
+            ? 'Contract ended'
+            : `Until ${prettyDateKey(profile.contractEnd)}`;
+      }
+      if (progressElement) {
+        const progress = after
+          ? 100
+          : before
+            ? 0
+            : ((now - bounds.start) / (bounds.endExclusive - bounds.start)) * 100;
+        progressElement.textContent = `${Math.round(Math.min(100, Math.max(0, progress)))}%`;
+      }
+      if (datesElement) {
+        datesElement.textContent = `Contract dates (${TIME_ZONE_NAMES[profile.scheduleZone]} calendar dates): ${prettyDateKey(profile.contractStart)} – ${prettyDateKey(profile.contractEnd)}`;
+      }
+    } catch {
+      if (daysElement) daysElement.textContent = '—';
+      if (statusElement) statusElement.textContent = 'Invalid contract dates';
+      if (progressElement) progressElement.textContent = '—';
+      if (datesElement) datesElement.textContent = 'Edit the profile to correct the contract dates.';
+    }
+  }
+
+  function renderShift(host, profile, now) {
+    const dateInput = host.querySelector('#shiftDate');
+    const countdownElement = host.querySelector('#shiftCountdown');
+    const statusElement = host.querySelector('#shiftStatus');
+    const titleElement = host.querySelector('#shiftHoursTitle');
+    const valueElement = host.querySelector('#shiftHoursValue');
+    const sourceElement = host.querySelector('#shiftHoursSource');
+    const noteElement = host.querySelector('#selectedDateNote');
+    if (!dateInput) return;
+    const date = dateInput.value;
+    const schedule = date ? profile.schedules[date] : null;
+
+    if (!date) {
+      if (countdownElement) countdownElement.textContent = '—';
+      if (statusElement) statusElement.textContent = 'Select a date';
+      if (titleElement) titleElement.textContent = 'Shift hours';
+      if (valueElement) valueElement.textContent = '—';
+      if (sourceElement) sourceElement.textContent = 'No date selected';
+      if (noteElement) noteElement.textContent = 'Select a date. The app will only show a shift if that date exists in this profile.';
+      return;
+    }
+    if (!schedule) {
+      if (countdownElement) countdownElement.textContent = '—';
+      if (statusElement) statusElement.textContent = 'No saved shift';
+      if (titleElement) titleElement.textContent = 'Shift hours (not saved)';
+      if (valueElement) valueElement.textContent = '—';
+      if (sourceElement) sourceElement.textContent = 'No shift invented';
+      if (noteElement) noteElement.textContent = `No shift is saved for ${date}. The app does not invent a shift; edit this profile to add a confirmed schedule.`;
+      return;
+    }
+
+    try {
+      const bounds = getShiftBounds(date, schedule, profile.scheduleZone);
+      if (titleElement) titleElement.textContent = `Shift hours (${TIME_ZONE_NAMES[profile.displayZone]})`;
+      if (valueElement) {
+        valueElement.textContent = `${formatClock(bounds.start, profile.displayZone, false)}–${formatClock(bounds.end, profile.displayZone, false)}`;
+      }
+      if (sourceElement) {
+        sourceElement.textContent = bounds.overnight
+          ? `Overnight · ends next day · ${TIME_ZONE_NAMES[profile.scheduleZone]} schedule`
+          : `Saved · ${TIME_ZONE_NAMES[profile.scheduleZone]} schedule`;
+      }
+      if (now < bounds.start) {
+        if (countdownElement) countdownElement.textContent = formatDuration(bounds.start - now);
+        if (statusElement) statusElement.textContent = 'Until shift starts';
+      } else if (now < bounds.end) {
+        if (countdownElement) countdownElement.textContent = formatDuration(bounds.end - now);
+        if (statusElement) statusElement.textContent = 'Time until shift ends';
+      } else {
+        if (countdownElement) countdownElement.textContent = 'Ended';
+        if (statusElement) statusElement.textContent = 'Confirm attendance in Ogram if required';
+      }
+      if (noteElement) {
+        const endDayNote = bounds.overnight ? ' The shift ends on the next schedule-zone date.' : '';
+        noteElement.textContent = `Shift date ${date}. Source schedule: ${TIME_ZONE_NAMES[profile.scheduleZone]}. Displayed in ${TIME_ZONE_NAMES[profile.displayZone]}.${endDayNote} Local self-confirmations do not change Ogram.`;
+      }
+    } catch {
+      if (countdownElement) countdownElement.textContent = '—';
+      if (statusElement) statusElement.textContent = 'Invalid saved shift';
+      if (valueElement) valueElement.textContent = '—';
+      if (noteElement) noteElement.textContent = 'The saved times for this date are invalid. Edit the profile to correct them.';
+    }
+  }
+
+  function renderDashboard(profile) {
+    const dashboardGeneration = ++viewGeneration;
+    stopTicker();
+    clearAppMessage();
+    const host = activeProfileView;
+    currentHost = host;
+    host.replaceChildren(dashboardTemplate.content.cloneNode(true));
+
+    const menu = host.querySelector('#dashboardMenu');
+    const menuToggle = document.getElementById('securityTopButton');
+    const dashboardPages = [...host.querySelectorAll('[data-dashboard-page]')];
+    const menuButtons = [...host.querySelectorAll('[data-dashboard-view]')];
+    const securityMenuButton = host.querySelector('[data-dashboard-security]');
+    const appActions = document.querySelector('.app-actions');
+    if (menu && appActions) appActions.append(menu);
+    if (menuToggle) menuToggle.onclick = () => {
+      const isOpen = menuToggle.getAttribute('aria-expanded') === 'true';
+      menuToggle.setAttribute('aria-expanded', String(!isOpen));
+      menu?.classList.toggle('hidden', isOpen);
+    };
+    const openDashboardPage = (name) => {
+      showOnly('activeProfilePanel');
+      for (const page of dashboardPages) page.classList.toggle('hidden', page.dataset.dashboardPage !== name);
+      for (const button of menuButtons) {
+        if (button.dataset.dashboardView === name) button.setAttribute('aria-current', 'page');
+        else button.removeAttribute('aria-current');
+      }
+      menu?.classList.add('hidden');
+      menuToggle?.setAttribute('aria-expanded', 'false');
+      if (name !== 'home') window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+    for (const button of menuButtons) {
+      button.addEventListener('click', () => openDashboardPage(button.dataset.dashboardView));
+    }
+    securityMenuButton?.addEventListener('click', () => {
+      menu?.classList.add('hidden');
+      menuToggle?.setAttribute('aria-expanded', 'false');
+      showOnly('securityPanel');
+      document.dispatchEvent(new Event('dkasu:security-open'));
+    });
+    for (const button of host.querySelectorAll('[data-open-dashboard-view]')) {
+      button.addEventListener('click', () => openDashboardPage(button.dataset.openDashboardView));
+    }
+
+    setText(host, '#dashName', profile.name);
+    setText(host, '#dashJob', profile.job || 'Job not set');
+    setText(host, '#dashCompany', profile.company ? ` · ${profile.company}` : '');
+    setText(host, '#dashProfileId', profile.profileId || 'Not set');
+    setText(host, '#dashSwipeId', profile.swipeId || 'Not set');
+    setText(host, '#accountEmail', profile.email || 'Not set');
+    setText(host, '#accountName', profile.name);
+    setText(host, '#accountProfileId', profile.profileId || 'Not set');
+    setText(host, '#accountJob', profile.job || 'Not set');
+    setText(host, '#accountCompany', profile.company || 'Not set');
+    setText(host, '#accountLocation', profile.location || 'Not set');
+    setText(host, '#address', profile.address || 'No work address saved.');
+    setText(host, '#copyStatus', '');
+
+    const timezoneSelect = host.querySelector('#primaryTimezone');
+    if (timezoneSelect) timezoneSelect.value = profile.displayZone;
+    const timezoneLabel = host.querySelector('#timezoneSelected');
+    if (timezoneLabel) timezoneLabel.textContent = `Dashboard uses ${TIME_ZONE_NAMES[profile.displayZone]} time`;
+
+    const dateInput = host.querySelector('#shiftDate');
+    const scheduleDates = Object.keys(profile.schedules).sort();
+    let manuallySelectedScheduleDate = false;
+    if (dateInput) {
+      const allMinDates = [profile.contractStart, ...scheduleDates].filter(Boolean).sort();
+      const allMaxDates = [profile.contractEnd, ...scheduleDates].filter(Boolean).sort();
+      dateInput.min = allMinDates[0] || '';
+      dateInput.max = allMaxDates[allMaxDates.length - 1] || '';
+      const upcoming = nextScheduledShift(profile, new Date());
+      dateInput.value = upcoming?.date || scheduleDates[scheduleDates.length - 1] || profile.contractStart || '';
+    }
+
+    renderSchedule(host, profile);
+
+    const copyButton = host.querySelector('#copyAddress');
+    const confirmationPanel = host.querySelector('#endShiftConfirmation');
+    const track = host.querySelector('#swipeTrack');
+    const knob = host.querySelector('#swipeKnob');
+    const swipeLabel = host.querySelector('#swipeLabel');
+    const confirmStatus = host.querySelector('#endShiftStatus');
+    let completed = false;
+    let savingConfirmation = false;
+    let dragging = false;
+    let dragStartX = 0;
+    let dragOffset = 0;
+
+    const currentDate = () => host.querySelector('#shiftDate')?.value || '';
+    const currentSchedule = () => {
+      const date = currentDate();
+      return date ? profile.schedules[date] : null;
+    };
+    const maxOffset = () => Math.max(0, (track?.clientWidth || 0) - (knob?.offsetWidth || 0) - 8);
+
+    function paint(offset) {
+      if (!knob) return;
+      dragOffset = Math.max(0, Math.min(maxOffset(), offset));
+      knob.style.left = `${4 + dragOffset}px`;
+    }
+
+    function syncConfirmationPanel() {
+      if (!confirmationPanel) return;
+      confirmationPanel.classList.toggle('show', Boolean(currentSchedule()) && !store.readOnly);
+    }
+
+    function showSavedConfirmation(record) {
+      if (!track || !knob || !swipeLabel || !confirmStatus || !record) return;
+      completed = true;
+      track.classList.add('done');
+      knob.textContent = '✓';
+      knob.style.left = 'calc(100% - 52px)';
+      swipeLabel.textContent = 'This shift is self-confirmed';
+      try {
+        const syncMessage = record.syncStatus === 'synced'
+          ? 'Synced to DKASU admin as your swiper self-confirmation.'
+          : record.syncStatus === 'pending'
+            ? 'Saved on this device. It will sync to DKASU when online.'
+            : 'Saved on this device only.';
+        confirmStatus.textContent = `Self-confirmed ${formatDateTime(new Date(record.confirmedAt), record.timezone || profile.displayZone)} (${TIME_ZONE_NAMES[record.timezone || profile.displayZone]} time). ${syncMessage} Ogram is unchanged.`;
+      } catch {
+        confirmStatus.textContent = 'A local self-confirmation is saved, but its timestamp could not be displayed. Ogram is unchanged.';
+      }
+    }
+
+    function resetConfirmation() {
+      completed = false;
+      if (!track || !knob || !swipeLabel || !confirmStatus) return;
+      track.classList.remove('done');
+      knob.textContent = '›';
+      knob.style.transition = 'none';
+      knob.style.left = '4px';
+      dragOffset = 0;
+      swipeLabel.textContent = 'Swipe to confirm finished';
+      confirmStatus.textContent = '';
+    }
+
+    function restoreConfirmation() {
+      const date = currentDate();
+      const record = date ? profile.confirmations[date] : null;
+      resetConfirmation();
+      if (!record) return;
+      showSavedConfirmation(record);
+    }
+
+    async function saveConfirmation() {
+      const date = currentDate();
+      if (savingConfirmation || completed) return;
+      if (!date || !profile.schedules[date]) {
+        resetConfirmation();
+        if (confirmStatus) confirmStatus.textContent = 'No saved shift exists for this date. Nothing was confirmed.';
+        return;
+      }
+      savingConfirmation = true;
+      if (dateInput) dateInput.disabled = true;
+      if (swipeLabel) swipeLabel.textContent = 'Saving…';
+        if (confirmStatus) confirmStatus.textContent = 'Writing your self-confirmation for this swipe account…';
+      paint(maxOffset());
+      try {
+        const result = await store.confirmShift(profile.id, date, { queueForSync: workerMode, syncActorId });
+        if (dashboardGeneration !== viewGeneration || !host.isConnected || destroyed) return;
+        profile = result.profile;
+        let syncResult = null;
+        const assignedWorkerId = workerIdsByProfileId[profile.id];
+        if (workerMode && assignedWorkerId) {
+          try {
+            syncResult = await onResumeSync(profile.id, assignedWorkerId);
+            profile = store.getProfile(profile.id) || profile;
+          } catch {
+            // The durable local event remains pending and will be retried on resume.
+          }
+        }
+        currentProfile = profile;
+        if (currentDate() === date) {
+          showSavedConfirmation(profile.confirmations[date] || result.confirmation);
+        } else {
+          restoreConfirmation();
+        }
+        setStorageStatus(workerMode
+          ? syncResult?.held
+            ? `Self-confirmation saved for this swipe account. ${syncResult.held} older pending confirmation(s) have no saved operator identity and remain on this device for review or backup.`
+            : 'Self-confirmation saved for this swipe account and queued for DKASU sync. Ogram was not contacted.'
+          : 'Self-confirmation saved on this device. Ogram was not contacted.');
+      } catch (error) {
+        if (dashboardGeneration === viewGeneration && host.isConnected) {
+          resetConfirmation();
+          if (confirmStatus) {
+            confirmStatus.textContent = `Self-confirmation was not saved. ${errorMessage(error)}`;
+          }
+          setStorageStatus('The self-confirmation was not saved to device storage.');
+        }
+      } finally {
+        savingConfirmation = false;
+        if (dateInput?.isConnected) dateInput.disabled = false;
+      }
+    }
+
+    function beginDrag(event) {
+      if (completed || savingConfirmation) return;
+      dragging = true;
+      dragStartX = event.clientX;
+      knob?.setPointerCapture?.(event.pointerId);
+    }
+
+    function moveDrag(event) {
+      if (!dragging) return;
+      paint(dragOffset + (event.clientX - dragStartX));
+      dragStartX = event.clientX;
+      const max = maxOffset();
+      if (max > 0 && dragOffset >= max * 0.82) {
+        dragging = false;
+        paint(max);
+        void saveConfirmation();
+      }
+    }
+
+    function endDrag() {
+      if (!dragging) return;
+      dragging = false;
+      if (!completed && !savingConfirmation) {
+        if (knob) knob.style.transition = 'left .18s ease';
+        paint(0);
+        setTimeout(() => {
+          if (knob) knob.style.transition = '';
+        }, 200);
+      }
+    }
+
+    knob?.addEventListener('pointerdown', beginDrag);
+    knob?.addEventListener('pointermove', moveDrag);
+    knob?.addEventListener('pointerup', endDrag);
+    knob?.addEventListener('pointercancel', endDrag);
+
+    timezoneSelect?.addEventListener('change', async () => {
+      const requestedZone = timezoneSelect.value;
+      timezoneSelect.disabled = true;
+      try {
+        const updated = await store.setDisplayZone(profile.id, requestedZone);
+        if (dashboardGeneration !== viewGeneration) return;
+        profile = updated;
+        currentProfile = updated;
+        if (timezoneLabel) timezoneLabel.textContent = `Dashboard uses ${TIME_ZONE_NAMES[profile.displayZone]} time`;
+        tickDashboard();
+        setStorageStatus('Display time zone saved on this device.');
+      } catch (error) {
+        if (dashboardGeneration !== viewGeneration) return;
+        timezoneSelect.value = profile.displayZone;
+        showAppMessage(`Time zone was not saved. ${errorMessage(error)}`, 'error');
+      } finally {
+        if (dashboardGeneration === viewGeneration && timezoneSelect.isConnected) timezoneSelect.disabled = false;
+      }
+    });
+
+    dateInput?.addEventListener('change', () => {
+      manuallySelectedScheduleDate = true;
+      restoreConfirmation();
+      syncConfirmationPanel();
+      renderShift(host, profile, new Date());
+    });
+
+    if (copyButton) copyButton.disabled = !profile.address;
+    copyButton?.addEventListener('click', async () => {
+      const status = host.querySelector('#copyStatus');
+      if (!profile.address) return;
+      try {
+        await copyText(profile.address);
+        if (status) status.textContent = 'Address copied.';
+      } catch {
+        if (status) status.textContent = 'Copying was blocked. Press and hold the address to copy it manually.';
+      }
+    });
+
+    function tickDashboard() {
+      if (destroyed || dashboardGeneration !== viewGeneration || !host.isConnected) return;
+      if (currentProfile && currentProfile.id !== profile.id) return;
+      const now = new Date();
+      const clocks = {
+        clockUganda: TZ.uganda,
+        clockDubai: TZ.dubai,
+        clockItaly: TZ.italy
+      };
+      for (const [id, zone] of Object.entries(clocks)) {
+        const element = host.querySelector(`#${id}`);
+        if (element) element.textContent = formatClock(now, zone);
+      }
+      renderNextSchedule(host, profile, now);
+      if (!manuallySelectedScheduleDate && dateInput && !dateInput.disabled) {
+        const selected = dateInput.value ? profile.schedules[dateInput.value] : null;
+        if (selected) {
+          try {
+            if (getShiftBounds(dateInput.value, selected, profile.scheduleZone).end <= now) {
+              const next = nextScheduledShift(profile, now);
+              if (next && next.date !== dateInput.value) {
+                dateInput.value = next.date;
+                restoreConfirmation();
+                syncConfirmationPanel();
+              }
+            }
+          } catch {
+            // Keep invalid saved entries selected so they can be reviewed.
+          }
+        }
+      }
+      renderContract(host, profile, now);
+      renderShift(host, profile, now);
+    }
+
+    resumeCurrentDashboard = () => {
+      if (destroyed || dashboardGeneration !== viewGeneration || !host.isConnected) return;
+      stopTicker();
+      tickDashboard();
+      tickHandle = setInterval(tickDashboard, 1000);
+    };
+
+    restoreConfirmation();
+    syncConfirmationPanel();
+    tickDashboard();
+    tickHandle = setInterval(tickDashboard, 1000);
+    if (appRoot) appRoot.style.display = 'block';
+  }
+
+  function showBackupPanel() {
+    viewGeneration += 1;
+    stopTicker();
+    currentProfile = null;
+    clearAppMessage();
+    refreshWorkerProfileChoices();
+    showOnly('backupPanel');
+  }
+
+  function refreshWorkerProfileChoices() {
+    if (!refs.profileExportSelect) return;
+    const selected = refs.profileExportSelect.value;
+    const profiles = store.listProfiles();
+    refs.profileExportSelect.replaceChildren(...profiles.map((profile) => {
+      const option = document.createElement('option');
+      option.value = profile.id;
+      option.textContent = `${profile.name}${profile.swipeId ? ` · Swipe ID ${profile.swipeId}` : ''}`;
+      return option;
+    }));
+    if (profiles.some((profile) => profile.id === selected)) refs.profileExportSelect.value = selected;
+    if (refs.exportWorkerProfileButton) {
+      refs.exportWorkerProfileButton.disabled = store.readOnly || !profiles.length;
+    }
+  }
+
+  function downloadBackupInBrowser(filename, json) {
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.rel = 'noopener';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+
+  async function exportBackupToNativeFile(
+    filename,
+    json,
+    validate = parseBackupText,
+    { title = 'DKASU shift dashboard backup', dialogTitle = 'Save or share local backup' } = {}
+  ) {
+    const write = await Filesystem.writeFile({
+      path: filename,
+      data: json,
+      directory: Directory.Cache,
+      encoding: Encoding.UTF8
+    });
+    const readBack = await Filesystem.readFile({
+      path: filename,
+      directory: Directory.Cache,
+      encoding: Encoding.UTF8
+    });
+    validate(String(readBack.data));
+    await Share.share({
+      title,
+      dialogTitle,
+      files: [write.uri]
+    });
+  }
+
+  async function exportBackup() {
+    if (!refs.exportBackupButton || refs.exportBackupButton.disabled) return;
+    const profiles = store.listProfiles();
+    if (!profiles.length) {
+      setBackupStatus('There are no readable profiles to export. Restore a backup first.', 'error');
+      return;
+    }
+    setButtonBusy(refs.exportBackupButton, true, 'Preparing…');
+    if (refs.importBackupButton) refs.importBackupButton.disabled = true;
+    try {
+      let payload;
+      try {
+        payload = createBackup(profiles);
+      } catch (error) {
+        throw new Error(`Backup could not be created: ${errorMessage(error)}`);
+      }
+      const json = JSON.stringify(payload, null, 2);
+      parseBackupText(json);
+      const filename = backupFilename();
+      if (Capacitor.isNativePlatform()) {
+        await exportBackupToNativeFile(filename, json);
+        setBackupStatus(
+          'Backup file was written and verified. The Android share sheet opened; the file is only saved or shared to a destination you choose.',
+          'success'
+        );
+      } else {
+        downloadBackupInBrowser(filename, json);
+        setBackupStatus(
+          `Backup ${filename} was generated and passed to the browser download. Check your Downloads folder.`,
+          'success'
+        );
+      }
+    } catch (error) {
+      setBackupStatus(`Export failed. ${errorMessage(error)}`, 'error');
+    } finally {
+      setButtonBusy(refs.exportBackupButton, false);
+      if (refs.importBackupButton) refs.importBackupButton.disabled = false;
+    }
+  }
+
+  function findExistingWorkerProfile(profile) {
+    const profiles = store.listProfiles();
+    const packageDuplicate = profiles.find((existing) => existing.id === profile.id);
+    if (packageDuplicate) {
+      return {
+        existing: packageDuplicate,
+        message: `This worker profile is already on this phone as "${packageDuplicate.name}". Nothing was changed.`
+      };
+    }
+    if (profile.profileId) {
+      const accountDuplicate = profiles.find(
+        (existing) => existing.profileId && existing.profileId === profile.profileId
+      );
+      if (accountDuplicate) {
+        return {
+          existing: accountDuplicate,
+          message: `Profile ID ${profile.profileId} is already on this phone as "${accountDuplicate.name}". Nothing was changed.`
+        };
+      }
+    }
+    return null;
+  }
+
+  async function exportWorkerProfile() {
+    const profile = store.getProfile(refs.profileExportSelect?.value);
+    if (!profile) { setBackupStatus('Create or import a worker profile before exporting.', 'error'); return; }
+    const missing = [];
+    if (!profile.swipeId) missing.push('a Swipe ID');
+    if (!Object.keys(profile.schedules).length) missing.push('saved shifts');
+    if (missing.length) {
+      const proceed = globalThis.confirm(
+        `${profile.name} has no ${missing.join(' or ')}. Export the package anyway?\n\nThe worker will need an updated package from the owner/admin to receive those details.`
+      );
+      if (!proceed) {
+        setBackupStatus('Worker profile export cancelled. No file was created.');
+        return;
+      }
+    }
+    setButtonBusy(refs.exportWorkerProfileButton, true, 'Preparing…');
+    if (refs.importWorkerProfileButton) refs.importWorkerProfileButton.disabled = true;
+    try {
+      const json = JSON.stringify(createWorkerProfilePackage(profile), null, 2);
+      parseWorkerProfilePackageText(json);
+      const filename = workerProfileFilename(profile);
+      if (Capacitor.isNativePlatform()) {
+        await exportBackupToNativeFile(filename, json, parseWorkerProfilePackageText, {
+          title: 'DKASU worker profile package',
+          dialogTitle: 'Save or share worker profile'
+        });
+        setBackupStatus(`Profile package for ${profile.name} was written and verified. Choose a destination in Android's share sheet.`, 'success');
+      } else {
+        downloadBackupInBrowser(filename, json);
+        setBackupStatus(`Profile package for ${profile.name} was generated. Check your Downloads folder.`, 'success');
+      }
+    } catch (error) {
+      setBackupStatus(`Profile export failed. ${errorMessage(error)}`, 'error');
+    } finally {
+      setButtonBusy(refs.exportWorkerProfileButton, false);
+      if (refs.importWorkerProfileButton) refs.importWorkerProfileButton.disabled = store.readOnly;
+    }
+  }
+
+  async function importWorkerProfileFile(file) {
+    if (!file) return;
+    setBackupStatus('Checking the worker profile package. Existing profiles will be kept…');
+    try {
+      if (store.readOnly) {
+        throw new Error('Import is unavailable because saved profiles could not be read.');
+      }
+      if (file.size > MAX_BACKUP_CHARS) throw new ValidationError('Profile package is too large.');
+      const parsed = parseWorkerProfilePackageText(await file.text());
+      const profile = parsed.profile;
+      const duplicate = findExistingWorkerProfile(profile);
+      if (duplicate) {
+        setBackupStatus(`${duplicate.message} Use the existing profile instead.`, 'error');
+        return;
+      }
+      const confirmed = globalThis.confirm(
+        `Add ${profile.name} to this phone?\n\nAll existing profiles and their local self-confirmations will be kept.`
+      );
+      if (!confirmed) {
+        setBackupStatus('Import cancelled. No data was changed.');
+        return;
+      }
+      const imported = await store.importProfile(profile);
+      setStorageStatus('Worker profile was added to device storage. Existing profiles were kept.');
+      setBackupStatus(`${imported.name} was added. Existing profiles and local self-confirmations were kept.`, 'success');
+      showProfilePicker({
+        message: `${imported.name} was added. Select that profile to open the worker dashboard. Existing profiles were kept.`,
+        tone: 'success'
+      });
+    } catch (error) {
+      setBackupStatus(`Profile import failed. No data was changed. ${errorMessage(error)}`, 'error');
+    }
+  }
+
+  async function importBackupFile(file) {
+    if (!file) return;
+    setBackupStatus('Validating the complete backup before changing any data…');
+    try {
+      if (file.size > MAX_BACKUP_CHARS) throw new ValidationError('Backup file is too large.');
+      const text = await file.text();
+      if (text.length > MAX_BACKUP_CHARS) throw new ValidationError('Backup file is too large.');
+      const parsed = parseBackupText(text);
+      const names = parsed.profiles.map((profile) => profile.name).join(', ');
+      const confirmed = globalThis.confirm(
+        `Restore ${parsed.profiles.length} profile(s) and replace all current profiles on this device?\n\nProfiles in backup: ${names}\n\nThis cannot be undone unless you have an export of the current data.`
+      );
+      if (!confirmed) {
+        setBackupStatus('Restore cancelled. No data was changed.');
+        return;
+      }
+      setBackupStatus('Validation passed. Writing the restored profiles to device storage…');
+      await store.restoreProfiles(parsed.profiles);
+      viewGeneration += 1;
+      stopTicker();
+      currentProfile = null;
+      activeProfileView.replaceChildren();
+      updateMutationControls();
+      renderProfileList();
+      showOnly('profilePicker');
+      showAppMessage(`Restore complete. ${parsed.profiles.length} profile(s) loaded; previous profiles were replaced.`, 'success');
+      setStorageStatus('Restored profiles were saved to device storage.');
+      setBackupStatus('Restore complete. The restored profiles are available in the profile picker.', 'success');
+    } catch (error) {
+      setBackupStatus(`Restore failed. No data was changed. ${errorMessage(error)}`, 'error');
+    }
+  }
+
+  async function showProfilePickerAndClear() {
+    showProfilePicker();
+  }
+
+  byId('profilesTopButton')?.addEventListener('click', showProfilePickerAndClear);
+  byId('addTopButton')?.addEventListener('click', startAddProfile);
+  refs.addProfileButton?.addEventListener('click', startAddProfile);
+  refs.cancelEditorButton?.addEventListener('click', () => showProfilePicker());
+  refs.saveProfileButton?.addEventListener('click', () => {
+    void saveProfileEditor();
+  });
+  byId('switchProfileButton')?.addEventListener('click', showProfilePickerAndClear);
+  byId('editActiveButton')?.addEventListener('click', startEditProfile);
+  refs.deleteActiveButton?.addEventListener('click', () => {
+    void deleteActiveProfile();
+  });
+  refs.backupButton?.addEventListener('click', showBackupPanel);
+  refs.backFromBackupButton?.addEventListener('click', () => showProfilePicker());
+  const backFromSecurityButton = byId('backFromSecurityButton');
+  if (backFromSecurityButton) backFromSecurityButton.onclick = () => showOnly('activeProfilePanel');
+  refs.exportBackupButton?.addEventListener('click', () => {
+    void exportBackup();
+  });
+  refs.importBackupButton?.addEventListener('click', () => refs.backupFileInput?.click());
+  refs.backupFileInput?.addEventListener('change', () => {
+    const file = refs.backupFileInput?.files?.[0];
+    void importBackupFile(file).finally(() => {
+      if (refs.backupFileInput) refs.backupFileInput.value = '';
+    });
+  });
+  refs.exportWorkerProfileButton?.addEventListener('click', () => { void exportWorkerProfile(); });
+  refs.importWorkerProfileButton?.addEventListener('click', () => refs.workerProfileFileInput?.click());
+  refs.workerProfileFileInput?.addEventListener('change', () => {
+    const file = refs.workerProfileFileInput?.files?.[0];
+    void importWorkerProfileFile(file).finally(() => { if (refs.workerProfileFileInput) refs.workerProfileFileInput.value = ''; });
+  });
+
+  if (store.loadWarning) {
+    showAppMessage(store.loadWarning, 'error');
+    setStorageStatus('Stored profile data could not be read. No stored data was overwritten.');
   } else {
-   status.textContent="This browser does not expose persistent-storage protection. Data may remain locally, but export a backup.";
+    setStorageStatus(
+      `${store.listProfiles().length} profile(s) loaded from ${storageLabel}. Successful changes are written and verified before confirmation.`
+    );
   }
- } catch (_) {
-  status.textContent="Could not verify persistent-storage protection. Export a backup for safety.";
- }
-})();
-
-let deferredInstallPrompt=null;
-const installButton=document.getElementById("installAppButton");
-window.addEventListener("beforeinstallprompt",event=>{
- event.preventDefault();deferredInstallPrompt=event;installButton.style.display="block";
-});
-installButton.addEventListener("click",async()=>{
- if(!deferredInstallPrompt){installButton.textContent="Use browser menu → Install app";return;}
- deferredInstallPrompt.prompt();
- try{await deferredInstallPrompt.userChoice;}catch(_){}
- deferredInstallPrompt=null;installButton.style.display="none";
-});
-window.addEventListener("appinstalled",()=>{
- installButton.style.display="none";
- const st=document.getElementById("storageStatus");
- if(st)st.textContent += " App installation detected.";
-});
-
-// Export only this dashboard's namespaced settings and confirmations.
-const DASHBOARD_STORAGE_PREFIXES=[
- "ogramDashboardTimezone:AndrewWamani:ID432384",
- "ogramShiftSelfConfirmation:AndrewWamani:ID432384:"
-];
-document.getElementById("exportBackupButton").addEventListener("click",()=>{
- try {
-  const items={};
-  for(let i=0;i<localStorage.length;i++){
-   const key=localStorage.key(i);
-   if(key && DASHBOARD_STORAGE_PREFIXES.some(prefix=>key.startsWith(prefix)))items[key]=localStorage.getItem(key);
+  updateMutationControls();
+  if (workerMode && Object.keys(workerIdsByProfileId).length) {
+    const profileIds = Object.keys(workerIdsByProfileId);
+    for (const profileId of profileIds) void onResumeSync(profileId, workerIdsByProfileId[profileId]).catch(() => {});
+    syncVisibilityHandler = () => {
+      if (!document.hidden) {
+        for (const profileId of profileIds) void onResumeSync(profileId, workerIdsByProfileId[profileId]).catch(() => {});
+      }
+    };
+    syncOnlineHandler = () => {
+      for (const profileId of profileIds) void onResumeSync(profileId, workerIdsByProfileId[profileId]).catch(() => {});
+    };
+    document.addEventListener('visibilitychange', syncVisibilityHandler);
+    window.addEventListener('online', syncOnlineHandler);
   }
-  const payload={format:"AndrewWamaniShiftDashboardBackup",version:1,exportedAt:new Date().toISOString(),items};
-  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
-  const url=URL.createObjectURL(blob),a=document.createElement("a");
-  a.href=url;a.download="Andrew_Wamani_Dashboard_Backup.json";a.click();
-  setTimeout(()=>URL.revokeObjectURL(url),1000);
-  document.getElementById("storageStatus").textContent="Backup exported. Keep the JSON file somewhere safe.";
- } catch(_) {
-  document.getElementById("storageStatus").textContent="Backup export failed in this viewer. Open the installed dashboard in Chrome and try again.";
- }
-});
-document.getElementById("importBackupButton").addEventListener("click",()=>document.getElementById("backupFileInput").click());
-document.getElementById("backupFileInput").addEventListener("change",async event=>{
- const file=event.target.files && event.target.files[0];if(!file)return;
- try {
-  const payload=JSON.parse(await file.text());
-  if(payload.format!=="AndrewWamaniShiftDashboardBackup" || payload.version!==1 || !payload.items || typeof payload.items!=="object")throw new Error("Invalid backup");
-  const entries=Object.entries(payload.items);
-  if(entries.some(([key,value])=>!DASHBOARD_STORAGE_PREFIXES.some(prefix=>key.startsWith(prefix)) || typeof value!=="string"))throw new Error("Unexpected backup data");
-  for(const [key,value] of entries)localStorage.setItem(key,value);
-  document.getElementById("storageStatus").textContent="Backup restored. Reload the dashboard to refresh all saved settings and confirmations.";
- } catch(_) {
-  document.getElementById("storageStatus").textContent="Could not restore that backup. Choose a valid backup exported from Andrew’s dashboard.";
- } finally {event.target.value="";}
-});
-if("serviceWorker" in navigator && location.protocol!=="file:"){
- window.addEventListener("load",()=>navigator.serviceWorker.register("./service-worker.js").catch(()=>{
-  const st=document.getElementById("storageStatus");
-  if(st)st.textContent += " Offline caching could not be enabled in this browser.";
- }));
-}
-
-const STORAGE_KEY="dkasuMultiProfileDashboard.v1";
-const ACTIVE_KEY="dkasuMultiProfileDashboard.activeProfile.v1";
-const TZ_OPTIONS=["Asia/Dubai","Africa/Kampala","Europe/Rome"];
-const TZ_NAMES={"Asia/Dubai":"Dubai","Africa/Kampala":"Uganda","Europe/Rome":"Italy / Europe"};
-let profiles={};
-let activeProfileId=null;
-let editingProfileId=null;
-let tickHandle=null;
-let activeProfileStorageKey=null;
-
-function uid(){return "p_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,9);}
-function defaultAndrew() {
- return {
-  id:"andrew-wamani-id432384", name:"Andrew Wamani", email:"wamaniandrew26@gmail.com",
-  profileId:"ID432384", swipeId:"ID55911", job:"Warehouse Operator",
-  company:"Transcorp International Logistics", location:"UAEW Warehouse – DIP 2",
-  address:"Dubai Festival City Mall - Crescent Rd - Dubai",
-  contractStart:"2026-10-15", contractEnd:"2026-12-15",
-  displayZone:"Asia/Dubai", scheduleZone:"Asia/Dubai",
-  schedules:{
-   "2026-10-15":{start:"06:00",end:"16:00"},
-   "2026-10-16":{start:"06:00",end:"16:00"},
-   "2026-10-17":{start:"06:00",end:"16:00"},
-   "2026-10-18":{start:"06:00",end:"16:00"},
-   "2026-10-19":{start:"06:00",end:"16:00"},
-   "2026-10-22":{start:"06:00",end:"16:00"}
-  },
-  confirmations:{},
-  createdAt:new Date().toISOString(),
-  updatedAt:new Date().toISOString()
- };
-}
-function loadStore() {
- try {
-  const raw=localStorage.getItem(STORAGE_KEY);
-  if(raw) {
-   const parsed=JSON.parse(raw);
-   if(parsed && parsed.version===1 && Array.isArray(parsed.profiles)) {
-    profiles={};
-    for(const p of parsed.profiles) if(p && typeof p.id==="string" && typeof p.name==="string") profiles[p.id]=normalizeProfile(p);
-   }
+  if (workerMode && store.listProfiles().length === 1 && store.getActiveProfile()) {
+    void openProfile(store.getActiveProfileId());
+  } else {
+    showProfilePicker();
   }
- } catch(e){ console.warn("Could not load profile data",e); }
- if(!Object.keys(profiles).length) {
-  const a=defaultAndrew(); profiles[a.id]=a; saveStore();
- }
-}
-function normalizeProfile(p) {
- return {
-  id:String(p.id||uid()),name:String(p.name||"Unnamed profile"),email:String(p.email||""),
-  profileId:String(p.profileId||""),swipeId:String(p.swipeId||""),job:String(p.job||""),
-  company:String(p.company||""),location:String(p.location||""),address:String(p.address||""),
-  contractStart:String(p.contractStart||""),contractEnd:String(p.contractEnd||""),
-  displayZone:TZ_OPTIONS.includes(p.displayZone)?p.displayZone:"Asia/Dubai",
-  scheduleZone:TZ_OPTIONS.includes(p.scheduleZone)?p.scheduleZone:"Asia/Dubai",
-  schedules:(p.schedules&&typeof p.schedules==="object")?p.schedules:{},
-  confirmations:(p.confirmations&&typeof p.confirmations==="object")?p.confirmations:{},
-  createdAt:p.createdAt||new Date().toISOString(),updatedAt:p.updatedAt||new Date().toISOString()
- };
-}
-function saveStore() {
- try {
-  localStorage.setItem(STORAGE_KEY,JSON.stringify({version:1,updatedAt:new Date().toISOString(),profiles:Object.values(profiles)}));
-  document.getElementById("storageStatus").textContent="Profile data saved on this device.";
-  return true;
- } catch(e) {
-  document.getElementById("storageStatus").textContent="Could not save data. Storage may be full or blocked; export a backup and check browser permissions.";
-  return false;
- }
-}
-function activeProfile(){return activeProfileId?profiles[activeProfileId]:null;}
-function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
-function showOnly(id) {
- for(const panel of ["profilePicker","profileEditor","backupPanel","activeProfilePanel"]) document.getElementById(panel).classList.toggle("hidden",panel!==id);
-}
-function renderProfileList() {
- const host=document.getElementById("profileList"); host.innerHTML="";
- const all=Object.values(profiles).sort((a,b)=>a.name.localeCompare(b.name));
- if(!all.length) host.innerHTML='<p>No profiles yet. Add a profile to begin.</p>';
- for(const p of all) {
-  const btn=document.createElement("button");btn.type="button";btn.className="profile-choice"+(p.id===activeProfileId?" active":"");
-  btn.innerHTML='<div class="avatar">'+esc(p.name.trim().split(/\s+/).map(x=>x[0]).join("").slice(0,2).toUpperCase())+'</div><div class="profile-meta"><strong>'+esc(p.name)+'</strong><span>'+esc([p.job,p.email].filter(Boolean).join(" · "))+'</span></div><span aria-hidden="true">›</span>';
-  btn.addEventListener("click",()=>openProfile(p.id));host.appendChild(btn);
- }
-}
-function openProfile(id) {
- if(!profiles[id]) return;
- activeProfileId=id;localStorage.setItem(ACTIVE_KEY,id);
- renderProfileList();renderDashboard(profiles[id]);showOnly("activeProfilePanel");
-}
-function fillEditor(p) {
- const fields={pName:p?.name||"",pEmail:p?.email||"",pProfileId:p?.profileId||"",pSwipeId:p?.swipeId||"",pJob:p?.job||"",pCompany:p?.company||"",pLocation:p?.location||"",pAddress:p?.address||"",pContractStart:p?.contractStart||"",pContractEnd:p?.contractEnd||"",pTimezone:p?.displayZone||"Asia/Dubai",pShiftZone:p?.scheduleZone||"Asia/Dubai",pSchedules:Object.entries(p?.schedules||{}).sort(([a],[b])=>a.localeCompare(b)).map(([date,s])=>`${date},${s.start},${s.end}`).join("\n")};
- for(const [id,value] of Object.entries(fields))document.getElementById(id).value=value;
- document.getElementById("editorTitle").textContent=p?"Edit profile":"Add profile";
-}
-function startAdd(){editingProfileId=null;fillEditor(null);showOnly("profileEditor");}
-function startEdit(){const p=activeProfile();if(!p)return;editingProfileId=p.id;fillEditor(p);showOnly("profileEditor");}
-function saveEditor() {
- const name=document.getElementById("pName").value.trim(), address=document.getElementById("pAddress").value.trim();
- if(!name){alert("Enter the worker's full name.");return;}
- if(!address){alert("Enter the work address.");return;}
- const start=document.getElementById("pContractStart").value,end=document.getElementById("pContractEnd").value;
- if(start&&end&&end<start){alert("Contract end date must be on or after the start date.");return;}
- const schedules={};const lines=document.getElementById("pSchedules").value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
- for(let i=0;i<lines.length;i++) {
-  const m=lines[i].match(/^(\d{4}-\d{2}-\d{2})\s*,\s*(\d{2}:\d{2})\s*,\s*(\d{2}:\d{2})$/);
-  if(!m){alert("Schedule line "+(i+1)+" is invalid. Use YYYY-MM-DD,HH:MM,HH:MM.");return;}
-  if(m[2]>"23:59"||m[3]>"23:59"){alert("Schedule times must be between 00:00 and 23:59.");return;}
-  if(m[3]<=m[2]){alert("End time must be after start time for each shift. Overnight shifts are not supported yet.");return;}
-  if(schedules[m[1]]){alert("Duplicate schedule date: "+m[1]);return;}
-  schedules[m[1]]={start:m[2],end:m[3]};
- }
- const old=editingProfileId?profiles[editingProfileId]:null;
- const p=normalizeProfile({
-  ...(old||{id:uid(),createdAt:new Date().toISOString(),confirmations:{}}),
-  name,email:document.getElementById("pEmail").value.trim(),
-  profileId:document.getElementById("pProfileId").value.trim(),swipeId:document.getElementById("pSwipeId").value.trim(),
-  job:document.getElementById("pJob").value.trim(),company:document.getElementById("pCompany").value.trim(),
-  location:document.getElementById("pLocation").value.trim(),address,
-  contractStart:start,contractEnd:end,
-  displayZone:document.getElementById("pTimezone").value,scheduleZone:document.getElementById("pShiftZone").value,
-  schedules,confirmations:old?.confirmations||{},updatedAt:new Date().toISOString()
- });
- profiles[p.id]=p;activeProfileId=p.id;saveStore();openProfile(p.id);
-}
-function deleteActive() {
- const p=activeProfile();if(!p)return;
- if(!confirm("Delete "+p.name+"'s profile, schedules, and local confirmations from this device? Export a backup first if needed."))return;
- delete profiles[p.id];if(activeProfileId===p.id)activeProfileId=null;localStorage.removeItem(ACTIVE_KEY);saveStore();renderProfileList();showOnly("profilePicker");
-}
-function zoneParts(date,zone) {
- const parts=new Intl.DateTimeFormat("en-GB",{timeZone:zone,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"}).formatToParts(date);
- return Object.fromEntries(parts.filter(p=>p.type!=="literal").map(p=>[p.type,p.value]));
-}
-function zonedDateTime(y,m,d,h=0,mi=0,sec=0,zone="Asia/Dubai") {
- const target=Date.UTC(y,m-1,d,h,mi,sec);let guess=target;
- for(let i=0;i<4;i++){const p=zoneParts(new Date(guess),zone);const represented=Date.UTC(+p.year,+p.month-1,+p.day,+p.hour,+p.minute,+p.second);guess+=target-represented;}
- return new Date(guess);
-}
-function formatClock(date,zone){return new Intl.DateTimeFormat("en-GB",{timeZone:zone,hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).format(date);}
-function fmtDuration(ms){let s=Math.max(0,Math.floor(ms/1000));const d=Math.floor(s/86400);s%=86400;const h=Math.floor(s/3600);s%=3600;const m=Math.floor(s/60);s%=60;return (d?d+"d ":"")+(h?String(h).padStart(2,"0")+"h ":"")+String(m).padStart(2,"0")+"m "+String(s).padStart(2,"0")+"s";}
-function dateLabel(date,zone){return new Intl.DateTimeFormat("en-GB",{timeZone:zone,day:"numeric",month:"short",year:"numeric"}).format(date);}
-function renderDashboard(p) {
- const template=document.getElementById("dashboardTemplate").innerHTML;
- const host=document.getElementById("activeProfileView");
- host.innerHTML=template;
- const replaceMap={
-  "Andrew Wamani":p.name,"wamaniandrew26@gmail.com":p.email,"ID432384":p.profileId,"ID55911":p.swipeId,
-  "Warehouse Operator":p.job,"Transcorp International Logistics":p.company,"UAEW Warehouse – DIP 2":p.location,
-  "Dubai Festival City Mall - Crescent Rd - Dubai":p.address,
-  "15 Oct – 15 Dec 2026":(p.contractStart&&p.contractEnd)?`${p.contractStart} – ${p.contractEnd}`:"Contract dates not set",
-  "06:00–16:00": "Shift times from profile schedule"
- };
- for(const el of host.querySelectorAll("*")) {
-  if(el.children.length===0) {
-   let txt=el.textContent;
-   for(const [a,b] of Object.entries(replaceMap))if(a)txt=txt.split(a).join(b||"Not provided");
-   if(txt!==el.textContent)el.textContent=txt;
-  }
- }
- const select=host.querySelector("#primaryTimezone");if(select)select.value=p.displayZone;
- const dateInput=host.querySelector("#shiftDate");
- if(dateInput) {
-  const dates=Object.keys(p.schedules).sort();
-  dateInput.min=p.contractStart||dates[0]||"";
-  dateInput.max=p.contractEnd||dates[dates.length-1]||"";
-  dateInput.value=dates.includes(new Date().toISOString().slice(0,10))?new Date().toISOString().slice(0,10):(dates[0]||p.contractStart||"");
- }
- const scheduleSection=host.querySelector(".schedule");
- if(scheduleSection) {
-  scheduleSection.innerHTML="";
-  const dates=Object.keys(p.schedules).sort();
-  if(!dates.length)scheduleSection.innerHTML='<div class="day"><div><strong>No shifts added</strong></div><span>Edit profile to add dates</span></div>';
-  for(const d of dates) {
-   const day=document.createElement("div");day.className="day";
-   day.innerHTML='<div><strong>'+esc(d)+'</strong></div><span>'+esc(p.schedules[d].start)+' – '+esc(p.schedules[d].end)+' ('+esc(TZ_NAMES[p.scheduleZone])+')</span>';
-   scheduleSection.appendChild(day);
-  }
- }
- // Install handlers on the single active profile DOM.
- const primary=host.querySelector("#primaryTimezone");
- const copy=host.querySelector("#copyAddress");
- const shiftDate=host.querySelector("#shiftDate");
- if(primary)primary.addEventListener("change",()=>{p.displayZone=primary.value;saveStore();updateDashboardTick(p,host);});
- if(shiftDate)shiftDate.addEventListener("change",()=>{updateDashboardTick(p,host);restoreConfirmation(p,host);});
- if(copy)copy.addEventListener("click",async()=>{
-  try{await navigator.clipboard.writeText(p.address);host.querySelector("#copyStatus").textContent="Address copied."}
-  catch(_){host.querySelector("#copyStatus").textContent="Copy blocked. Press and hold the address to copy it manually."}
-  const c=host.querySelector("#endShiftConfirmation");if(c)c.classList.add("show");
- });
- setupSwipe(p,host);
- updateDashboardTick(p,host);
- if(tickHandle)clearInterval(tickHandle);
- tickHandle=setInterval(()=>{if(activeProfileId===p.id)updateDashboardTick(p,host);},1000);
-}
-function updateDashboardTick(p,host) {
- const now=new Date();
- const zones={"clockUganda":"Africa/Kampala","clockDubai":"Asia/Dubai","clockItaly":"Europe/Rome"};
- for(const [id,zone] of Object.entries(zones)){const el=host.querySelector("#"+id);if(el)el.textContent=formatClock(now,zone);}
- const boundsStart=p.contractStart?zonedDateTime(...p.contractStart.split("-").map(Number),0,0,0,"Asia/Dubai"):null;
- let boundsEnd=null;if(p.contractEnd){const [y,m,d]=p.contractEnd.split("-").map(Number);boundsEnd=zonedDateTime(y,m,d+1,0,0,0,"Asia/Dubai");}
- const daysEl=host.querySelector("#daysRemaining"),status=host.querySelector("#contractStatus"),progress=host.querySelector("#progress"),contractDates=host.querySelector("#contractDates");
- if(daysEl&&boundsStart&&boundsEnd) {
-  daysEl.textContent=now<boundsStart?Math.ceil((boundsStart-now)/86400000)+" days to start":now>=boundsEnd?"0 days":Math.ceil((boundsEnd-now)/86400000)+" days";
-  status.textContent=now<boundsStart?"Not started":now>=boundsEnd?"Contract ended":"Until "+dateLabel(new Date(boundsEnd.getTime()-1),p.displayZone);
-  if(progress)progress.textContent=Math.round(Math.min(100,Math.max(0,(now-boundsStart)/(boundsEnd-boundsStart)*100)))+"%";
-  if(contractDates)contractDates.textContent="Contract dates (Dubai-local dates, shown in "+TZ_NAMES[p.displayZone]+" time): "+dateLabel(boundsStart,p.displayZone)+" – "+dateLabel(new Date(boundsEnd.getTime()-1),p.displayZone);
- } else if(daysEl){daysEl.textContent="Not set";if(status)status.textContent="Add contract dates";}
- const dateInput=host.querySelector("#shiftDate");if(!dateInput||!dateInput.value)return;
- const date=dateInput.value,s=p.schedules[date],count=host.querySelector("#shiftCountdown"),shiftStatus=host.querySelector("#shiftStatus"),hoursTitle=host.querySelector("#shiftHoursTitle");
- if(!s){if(count)count.textContent="Not confirmed";if(shiftStatus)shiftStatus.textContent="Add/verify this date's shift";if(hoursTitle)hoursTitle.textContent="Shift hours (not set)";const val=hoursTitle?.nextElementSibling?.querySelector(".value");const val2=host.querySelector("#shiftHoursTitle + .value");if(val2)val2.textContent="—";const note=host.querySelector("#selectedDateNote");if(note)note.textContent="No shift saved for "+date+". Edit this profile to add the confirmed schedule.";return;}
- const [sy,sm,sd]=date.split("-").map(Number),[sh,smn]=s.start.split(":").map(Number),[eh,emn]=s.end.split(":").map(Number);
- const start=zonedDateTime(sy,sm,sd,sh,smn,0,p.scheduleZone),end=zonedDateTime(sy,sm,sd,eh,emn,0,p.scheduleZone);
- if(count)count.textContent=now<start?fmtDuration(start-now):now<end?fmtDuration(end-now):"Shift window ended";
- if(shiftStatus)shiftStatus.textContent=now<start?"Until shift starts":now<end?"Time until shift ends":"Confirm attendance in Ogram if required";
- if(hoursTitle)hoursTitle.textContent="Shift hours ("+TZ_NAMES[p.displayZone]+")";
- const value=host.querySelector("#shiftHoursTitle + .value");if(value)value.textContent=formatClock(start,p.displayZone)+"–"+formatClock(end,p.displayZone);
- const note=host.querySelector("#selectedDateNote");if(note)note.textContent="Shift date "+date+" · source schedule "+TZ_NAMES[p.scheduleZone]+" · displayed in "+TZ_NAMES[p.displayZone]+".";
-}
-function restoreConfirmation(p,host) {
- const date=host.querySelector("#shiftDate")?.value;if(!date)return;
- const record=p.confirmations[date],track=host.querySelector("#swipeTrack"),knob=host.querySelector("#swipeKnob"),label=host.querySelector("#swipeLabel"),status=host.querySelector("#endShiftStatus");
- if(!track||!knob||!label||!status)return;
- track.classList.remove("done");knob.style.left="4px";knob.textContent="›";label.textContent="Swipe to confirm finished";status.textContent="";
- if(record) {
-  track.classList.add("done");knob.textContent="✓";label.textContent="This shift is self-confirmed";
-  requestAnimationFrame(()=>knob.style.left=Math.max(4,track.clientWidth-knob.offsetWidth-4)+"px");
-  status.textContent="Self-confirmed "+new Intl.DateTimeFormat("en-GB",{timeZone:record.timezone||p.displayZone,dateStyle:"medium",timeStyle:"medium"}).format(new Date(record.confirmedAt))+". Local only; Ogram unchanged.";
- }
-}
-function setupSwipe(p,host) {
- const track=host.querySelector("#swipeTrack"),knob=host.querySelector("#swipeKnob"),label=host.querySelector("#swipeLabel"),status=host.querySelector("#endShiftStatus");
- if(!track||!knob||!label||!status)return;
- let dragging=false,startX=0,offset=0,completed=false;
- const max=()=>Math.max(0,track.clientWidth-knob.offsetWidth-8);
- function paint(x){offset=Math.max(0,Math.min(max(),x));knob.style.left=(4+offset)+"px";}
- function load(){const date=host.querySelector("#shiftDate")?.value;completed=!!(date&&p.confirmations[date]);restoreConfirmation(p,host);offset=completed?max():0;}
- function begin(e){if(completed)return;dragging=true;startX=e.clientX;knob.setPointerCapture?.(e.pointerId);}
- function move(e){if(!dragging)return;paint(offset+(e.clientX-startX));startX=e.clientX;if(offset>=max()*0.82){
-  completed=true;dragging=false;paint(max());track.classList.add("done");label.textContent="Shift confirmed in this page";knob.textContent="✓";
-  const stamp=new Date(),date=host.querySelector("#shiftDate")?.value;
-  if(!date||!p.schedules[date]){status.textContent="No confirmed schedule for this date. Add the schedule before confirming.";completed=false;return;}
-  p.confirmations[date]={shiftDate:date,confirmedAt:stamp.toISOString(),timezone:p.displayZone};
-  status.textContent="Self-confirmed for "+date+" at "+new Intl.DateTimeFormat("en-GB",{timeZone:p.displayZone,dateStyle:"medium",timeStyle:"medium"}).format(stamp)+". Local only; Ogram unchanged.";
-  saveStore();
- }}
- function end(){if(!dragging)return;dragging=false;if(!completed){offset=0;knob.style.transition="left .18s ease";paint(0);setTimeout(()=>knob.style.transition="",200);}}
- knob.addEventListener("pointerdown",begin);knob.addEventListener("pointermove",move);knob.addEventListener("pointerup",end);knob.addEventListener("pointercancel",end);
- host.querySelector("#shiftDate")?.addEventListener("change",load);
- window.addEventListener("resize",()=>{if(completed)paint(max());});
- load();
-}
-function showBackup(){showOnly("backupPanel");}
-function downloadJSON(filename,obj) {
- const blob=new Blob([JSON.stringify(obj,null,2)],{type:"application/json"});
- const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),1200);
-}
-function exportBackup() {
- downloadJSON("DKASU_Shift_Dashboard_Backup.json",{format:"DKASUShiftDashboardBackup",version:1,exportedAt:new Date().toISOString(),profiles:Object.values(profiles)});
- document.getElementById("backupStatus").textContent="Backup exported. Keep the JSON file private; it contains worker profile details and confirmation timestamps.";
-}
-async function importBackup(file) {
- const data=JSON.parse(await file.text());
- if(data.format!=="DKASUShiftDashboardBackup"||data.version!==1||!Array.isArray(data.profiles))throw new Error("This is not a supported dashboard backup.");
- const incoming={};
- for(const raw of data.profiles) {
-  if(!raw||typeof raw.name!=="string"||typeof raw.id!=="string")throw new Error("Invalid profile in backup.");
-  const p=normalizeProfile(raw);
-  for(const [date,s] of Object.entries(p.schedules))if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!/^\d{2}:\d{2}$/.test(s.start)||!/^\d{2}:\d{2}$/.test(s.end))throw new Error("Invalid shift schedule in backup.");
-  incoming[p.id]=p;
- }
- if(!Object.keys(incoming).length)throw new Error("Backup has no profiles.");
- if(!confirm("Restore "+Object.keys(incoming).length+" profiles? This replaces all current profiles on this device."))return;
- profiles=incoming;activeProfileId=null;saveStore();renderProfileList();showOnly("profilePicker");
- document.getElementById("backupStatus").textContent="Backup restored successfully.";
-}
-document.getElementById("addProfileButton").addEventListener("click",startAdd);
-document.getElementById("addTopButton").addEventListener("click",startAdd);
-document.getElementById("profilesTopButton").addEventListener("click",()=>{renderProfileList();showOnly("profilePicker");});
-document.getElementById("cancelEditorButton").addEventListener("click",()=>{renderProfileList();showOnly("profilePicker");});
-document.getElementById("saveProfileButton").addEventListener("click",saveEditor);
-document.getElementById("switchProfileButton").addEventListener("click",()=>{renderProfileList();showOnly("profilePicker");});
-document.getElementById("editActiveButton").addEventListener("click",startEdit);
-document.getElementById("deleteActiveButton").addEventListener("click",deleteActive);
-document.getElementById("backupButton").addEventListener("click",showBackup);
-document.getElementById("backFromBackupButton").addEventListener("click",()=>{renderProfileList();showOnly("profilePicker");});
-document.getElementById("exportBackupButton").addEventListener("click",()=>{try{exportBackup();}catch(e){document.getElementById("backupStatus").textContent="Export failed in this viewer. Open the installed app in Chrome and retry.";}});
-document.getElementById("importBackupButton").addEventListener("click",()=>document.getElementById("backupFileInput").click());
-document.getElementById("backupFileInput").addEventListener("change",async e=>{if(!e.target.files?.[0])return;try{await importBackup(e.target.files[0]);}catch(err){document.getElementById("backupStatus").textContent="Restore failed: "+err.message;}finally{e.target.value="";}});
-if("serviceWorker" in navigator&&location.protocol!=="file:")window.addEventListener("load",()=>navigator.serviceWorker.register("./service-worker.js").catch(()=>{document.getElementById("storageStatus").textContent="Offline caching unavailable in this browser."}));
-(async()=>{const s=document.getElementById("storageStatus");try{if(navigator.storage?.persist){const granted=(await navigator.storage.persisted())||await navigator.storage.persist();s.textContent=granted?"Persistent storage protection is enabled. Export backups as extra protection.":"Browser did not grant persistent-storage protection; export backups regularly.";}else s.textContent="Persistent storage protection is unavailable in this browser; export backups regularly."}catch(_){s.textContent="Could not verify storage protection; export backups regularly."}})();
 
-loadStore();
-renderProfileList();
-const last=localStorage.getItem(ACTIVE_KEY);
-if(last&&profiles[last])openProfile(last);else showOnly("profilePicker");
+  byId('workerSignOutButton')?.addEventListener('click', () => { void onSignOut(); });
+
+  return {
+    showProfilePickerForLock() {
+      stopTicker();
+    },
+    resumeAfterLock() {
+      resumeCurrentDashboard?.();
+    },
+    destroy() {
+      destroyed = true;
+      stopTicker();
+      if (syncVisibilityHandler) document.removeEventListener('visibilitychange', syncVisibilityHandler);
+      if (syncOnlineHandler) window.removeEventListener('online', syncOnlineHandler);
+      currentProfile = null;
+      currentHost?.replaceChildren();
+    }
+  };
+}

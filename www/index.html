@@ -4,18 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#182a45">
-<meta name="description" content="Multi-profile shift dashboard for a shared Android device.">
-
-
+<meta name="description" content="Offline, multi-profile shift dashboard for a shared Android device.">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Shift Dashboard">
 <title>Shift Dashboard — Profiles</title>
 <style>
-
-:root{color-scheme:light;--ink:#17233b;--muted:#6b7890;--line:#e3e8ef;--blue:#4559d8;--green:#12815d;--bg:#f3f6fa}
-*{box-sizing:border-box}body{margin:0;padding:14px;background:var(--bg);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink)}
+:root{color-scheme:light;--ink:#17233b;--muted:#6b7890;--line:#e3e8ef;--blue:#4559d8;--green:#12815d;--bg:#f3f6fa;--danger:#b42318}
+*{box-sizing:border-box}body{margin:0;padding:calc(14px + env(safe-area-inset-top,0px)) calc(14px + env(safe-area-inset-right,0px)) calc(14px + env(safe-area-inset-bottom,0px)) calc(14px + env(safe-area-inset-left,0px));background:var(--bg);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);overflow-x:hidden}
 main{max-width:540px;margin:0 auto}.hero{background:linear-gradient(135deg,#172744,#344f81);color:white;padding:22px;border-radius:20px;box-shadow:0 8px 24px #17274420}
 .eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.12em;opacity:.78}.hero h1{font-size:25px;line-height:1.2;margin:8px 0}.hero p{margin:5px 0;color:#e1e8f5;font-size:14px}
 .pill{display:inline-block;background:#ffffff20;border:1px solid #ffffff30;border-radius:999px;padding:6px 10px;font-size:12px;margin-top:9px}
@@ -26,16 +23,16 @@ h2{font-size:16px;margin:0 0 13px}h3{font-size:13px;color:var(--muted);margin:0 
 .rows{display:grid;gap:9px}.rowitem{display:flex;justify-content:space-between;gap:12px;font-size:14px;line-height:1.4}.rowitem .k{color:var(--muted)}.rowitem .v{text-align:right;font-weight:600;overflow-wrap:anywhere}
 .address{padding:13px;background:#f6f8fb;border:1px solid var(--line);border-radius:11px;font-size:16px;line-height:1.5;overflow-wrap:anywhere;user-select:text;-webkit-user-select:text}
 button{width:100%;border:0;border-radius:11px;background:var(--blue);color:white;font-weight:700;font-size:15px;padding:14px;margin-top:10px;cursor:pointer}
+button:disabled{opacity:.55;cursor:not-allowed}
 #copyStatus{min-height:18px;color:var(--green);font-size:13px;margin-top:7px}
 .schedule{display:grid;gap:8px}.day{display:flex;justify-content:space-between;gap:10px;padding:11px;border:1px solid var(--line);border-radius:10px;font-size:13px}.day strong{display:block}.day span{color:var(--muted);text-align:right}
 .note{font-size:12px;line-height:1.5;color:var(--muted);margin:11px 0 0}.footer{text-align:center;color:var(--muted);font-size:11px;padding:16px}
 .confirmation{display:none;margin-top:14px;padding:15px;border:1px solid #f1c9a8;background:#fff8f2;border-radius:13px}.confirmation.show{display:block}.confirmation h3{font-size:15px;color:var(--ink);margin:0 0 6px}.confirmation p{font-size:13px;line-height:1.45;color:var(--muted);margin:0 0 12px}.swipe-track{position:relative;height:56px;border-radius:999px;background:#ffede3;color:#c84c1c;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:750;overflow:hidden;touch-action:pan-y;user-select:none}.swipe-track .swipe-label{pointer-events:none;padding:0 52px;text-align:center}.swipe-knob{position:absolute;left:4px;top:4px;width:48px;height:48px;border-radius:50%;background:#f15b2a;color:white;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 2px 6px #0002;cursor:grab;touch-action:none}.swipe-track.done{background:#e7f8ef;color:#13764b}.swipe-track.done .swipe-knob{background:#159764}.confirm-status{font-size:13px;font-weight:650;margin-top:9px;color:var(--green);min-height:18px}
 @media(min-width:430px){.zone{padding:15px}.zone .zoneclock{font-size:24px}}
-
 .shell{max-width:620px;margin:0 auto;padding:14px 14px 32px}
-.appbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.appbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
 .brand{font-weight:850;font-size:18px;color:#17233b}
-.app-actions{display:flex;gap:8px;flex-wrap:wrap}
+.app-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;position:relative}
 .smallbtn{width:auto;padding:10px 12px;margin:0;font-size:13px}
 .panel{background:#fff;border:1px solid #e3e8ef;border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 3px 14px #1727440a}
 .panel h2{font-size:18px;margin:0 0 12px}
@@ -57,26 +54,84 @@ button{width:100%;border:0;border-radius:11px;background:var(--blue);color:white
 button.secondary{background:#56657b}
 button.danger{background:#b42318}
 .notice{font-size:12px;padding:10px;border-radius:9px;background:#eef5ff;color:#234ea0;margin-top:8px;line-height:1.5}
+.notice.error{background:#fef3f2;color:var(--danger)}
+.notice.success{background:#ecfdf3;color:#067647}
+.app-message{margin:0 0 12px}
+.form-error{min-height:19px;font-size:13px;line-height:1.45;color:var(--danger);margin:8px 0 0}
 .hidden{display:none!important}
 .profile-view{margin-top:12px}
+.dashboard-menu-toggle{display:grid;place-items:center;width:42px;height:42px;padding:0;margin:0;border:1px solid #dbe3ef;border-radius:13px;background:#fff;color:#263b5a;font-size:23px;box-shadow:0 3px 10px #17274412}.dashboard-menu-toggle:hover{background:#f2f5ff;border-color:#c7d2fe}.dashboard-menu{position:absolute;z-index:20;right:0;top:calc(100% + 8px);display:grid;grid-template-columns:1fr;gap:4px;width:min(230px,calc(100vw - 28px));padding:8px;border:1px solid #e3e8ef;border-radius:15px;background:#fff;box-shadow:0 14px 32px #17274424}.dashboard-menu button{display:flex;align-items:center;min-height:42px;margin:0;padding:10px 12px;border-radius:10px;background:#fff;color:#34445e;text-align:left;font-size:14px}.dashboard-menu button:hover{background:#f4f6fb}.dashboard-menu button[aria-current="page"]{background:#eef2ff;color:#3449bd}.dashboard-menu button[data-dashboard-security]{border-top:1px solid #e8ecf2;margin-top:5px;padding-top:13px}.dashboard-page{display:block}.dashboard-page.hidden{display:none!important}.page-link{margin-top:12px}
 details summary{cursor:pointer;font-weight:750}
+.card>summary{font-size:15px;color:var(--ink);list-style:none}.card>summary::-webkit-details-marker{display:none}.card>summary:after{content:'＋';float:right;color:var(--muted)}.card[open]>summary:after{content:'−'}.details-content{padding-top:12px}.next-day{border-color:#d9ddff;background:#f8f8ff}.next-zone{font-size:12px;color:var(--muted);margin-top:3px}.all-schedule{margin-top:12px}.all-schedule summary{padding:10px 0;color:var(--muted);font-size:13px}.all-schedule .schedule{max-height:280px;overflow:auto;padding-right:3px}
+.pin-error{min-height:18px;color:var(--danger);font-size:13px;margin:10px 0 0}
+.pin-recovery{margin-top:14px;padding-top:12px;border-top:1px solid #e3e8ef}.pin-recovery summary{cursor:pointer;color:#4559d8;font-size:13px;font-weight:750}.pin-recovery input{width:100%;box-sizing:border-box;padding:13px;border:1px solid #d9e0ea;border-radius:10px;font:inherit;margin:10px 0 0}.pin-recovery .pin-submit{font-size:13px;padding:12px;margin-top:8px}
+.pin-note{font-size:11px;color:#66738a;line-height:1.45;margin-top:12px}
+.worker-auth-gate{position:fixed;inset:0;z-index:99998;background:#f3f6fa;display:none;align-items:center;justify-content:center;padding:22px;font-family:system-ui,sans-serif;overflow:auto}
+.worker-auth-card{width:100%;max-width:420px;background:#fff;border:1px solid #e3e8ef;border-radius:20px;padding:24px;box-shadow:0 12px 40px #17274420}
+.worker-auth-card h1{font-size:24px;margin:9px 0;color:#17233b}.worker-auth-card p{color:#66738a;line-height:1.5}.worker-auth-card input{width:100%;box-sizing:border-box;padding:13px;border:1px solid #d9e0ea;border-radius:10px;font:inherit;margin:6px 0}
+.worker-auth-card #workerAuthMessage{margin:8px 0 14px}.worker-registration-choice{display:grid;gap:5px;margin-top:16px;padding-top:14px;border-top:1px solid #e3e8ef}.worker-registration-choice p{margin:0;font-size:13px;font-weight:700}.worker-auth-card .worker-registration-choice button{margin-top:4px}.worker-auth-card #workerRegisterIntro{margin-top:12px}.worker-auth-card #workerActivationForm{margin-top:14px}.worker-auth-card #workerActivationForm label{display:block;font-size:13px;font-weight:700;color:#344054}.worker-backup-details{margin-top:16px;padding-top:12px;border-top:1px solid #e3e8ef}.worker-backup-details summary{font-size:12px;color:#66738a}.worker-backup-details button{margin-top:4px}
+.pin-submit{width:100%;padding:14px;margin-top:12px;border:0;border-radius:11px;background:var(--blue);color:white;font-weight:700;font-size:15px}
+.security-toggle{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px;margin:16px 0;border:1px solid #d9e0ea;border-radius:12px;background:#fbfcfe}.security-toggle span{display:grid;gap:4px}.security-toggle strong{font-size:14px}.security-toggle small{color:#66738a;line-height:1.4}.security-toggle input{width:22px;height:22px;flex:none;accent-color:var(--blue)}#biometricUnlockStatus{min-height:20px}
 @media(max-width:420px){.fieldgrid{grid-template-columns:1fr}.shell{padding:10px}}
 </style>
 <script type="module" src="./boot.js"></script>
 </head>
 <body>
-<div id="pinGate" style="position:fixed;inset:0;z-index:99999;background:#f3f6fa;display:flex;align-items:center;justify-content:center;padding:22px;font-family:system-ui,sans-serif">
+<div id="pinGate" style="position:fixed;inset:0;z-index:99999;background:#f3f6fa;display:flex;align-items:center;justify-content:center;padding:calc(22px + env(safe-area-inset-top,0px)) calc(22px + env(safe-area-inset-right,0px)) calc(22px + env(safe-area-inset-bottom,0px)) calc(22px + env(safe-area-inset-left,0px));font-family:system-ui,sans-serif;overflow:auto">
  <div style="width:100%;max-width:380px;background:#fff;border:1px solid #e3e8ef;border-radius:20px;padding:24px;box-shadow:0 12px 40px #17274420">
   <div style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#66738a">DKASU • PRIVATE DEVICE</div>
   <h1 id="pinTitle" style="font-size:25px;margin:10px 0 6px;color:#17233b">Unlock shift dashboard</h1>
   <p id="pinHelp" style="color:#66738a;line-height:1.5;margin:0 0 14px">Enter your app PIN to continue.</p>
-  <input id="pinInput" inputmode="numeric" autocomplete="current-password" type="password" maxlength="12" placeholder="4–12 digit PIN" style="width:100%;box-sizing:border-box;padding:14px;border:1px solid #d9e0ea;border-radius:11px;font:inherit">
-  <input id="pinConfirm" inputmode="numeric" autocomplete="new-password" type="password" maxlength="12" placeholder="Confirm PIN" style="display:none;width:100%;box-sizing:border-box;padding:14px;border:1px solid #d9e0ea;border-radius:11px;font:inherit;margin-top:9px">
-  <button id="pinSubmit" type="button" style="width:100%;padding:14px;margin-top:12px;border:0;border-radius:11px;background:#4559d8;color:white;font-weight:700;font-size:15px">Unlock</button>
-  <p id="pinError" role="status" style="min-height:18px;color:#b42318;font-size:13px;margin:10px 0 0"></p>
-  <p style="font-size:11px;color:#66738a;line-height:1.45;margin-top:12px">Worker data is stored on this device. Keep a separate backup. The PIN screen is a local app lock, not an Ogram login.</p>
+  <form id="pinForm" novalidate>
+   <input id="pinInput" aria-describedby="pinHelp pinError" inputmode="numeric" autocomplete="current-password" type="password" maxlength="12" placeholder="4–12 digit PIN" style="width:100%;box-sizing:border-box;padding:14px;border:1px solid #d9e0ea;border-radius:11px;font:inherit">
+   <input id="pinConfirm" inputmode="numeric" autocomplete="new-password" type="password" maxlength="12" placeholder="Confirm PIN" style="display:none;width:100%;box-sizing:border-box;padding:14px;border:1px solid #d9e0ea;border-radius:11px;font:inherit;margin-top:9px">
+   <button id="pinSubmit" class="pin-submit" type="submit">Unlock</button>
+  </form>
+  <button id="biometricUnlockButton" class="pin-submit hidden" type="button" style="background:#edf1f6;color:#182a45">Use fingerprint, face or phone lock</button>
+  <p id="pinError" class="pin-error" role="alert" aria-live="assertive"></p>
+  <details id="pinRecoveryPanel" class="pin-recovery hidden">
+   <summary>Forgot your PIN?</summary>
+   <p class="pin-note">Ask your DKASU admin for a one-time reset code. Sign in with the Google account registered to your swiper profile; the code expires after 15 minutes.</p>
+   <input id="pinRecoveryCode" autocomplete="one-time-code" maxlength="120" placeholder="Admin-issued reset code" aria-label="Admin-issued PIN reset code">
+   <button id="pinRecoverySubmit" class="pin-submit" type="button">Verify code and reset PIN</button>
+   <button id="pinRecoveryGoogleButton" class="pin-submit" type="button" style="background:#edf1f6;color:#182a45">Sign in with Google to recover</button>
+   <p id="pinRecoveryStatus" class="pin-note" role="status" aria-live="polite"></p>
+  </details>
+  <p class="pin-note">Your app PIN remains the fallback if optional biometric unlock is unavailable. It does not encrypt the SQLite database or replace a device lock. Keep a separate backup.</p>
  </div>
 </div>
+
+<div id="workerAuthGate" class="worker-auth-gate" aria-live="polite">
+  <div class="worker-auth-card">
+    <div style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#66738a">DKASU • SWIPER ACCESS</div>
+    <h1 id="workerAuthTitle">Sign in to your shift dashboard</h1>
+    <p id="workerAuthMessage">Already registered? Continue with the Google account your DKASU admin invited.</p>
+    <button id="workerGoogleButton" type="button">Continue with Google</button>
+    <button id="workerSignOutButton" class="secondary hidden" type="button">Sign out of this account</button>
+    <div id="workerRegistrationChoice" class="worker-registration-choice">
+      <p>New to the shift app?</p>
+      <button id="workerRegisterButton" class="secondary" type="button">Register as a swiper</button>
+    </div>
+    <div id="workerRegisterIntro" class="notice hidden" role="status">
+      <strong>Register your operator access</strong><br>
+      First sign in with Google using the email your admin invited. After sign-in, enter the one-time code for your swiper account. Your admin will assign the swipe accounts you can open.
+    </div>
+    <form id="workerActivationForm" class="hidden">
+      <label for="workerActivationCode">Admin-issued swiper activation code</label>
+      <input id="workerActivationCode" autocomplete="one-time-code" maxlength="120" placeholder="Enter your one-time code">
+      <button id="workerActivationButton" type="submit">Activate swiper access</button>
+    </form>
+    <details class="worker-backup-details">
+      <summary>Need to back up existing local data?</summary>
+      <p class="pin-note">Saved profiles and confirmations remain on this device. Export a backup here before continuing if you need a recovery or migration copy.</p>
+      <button id="legacyBackupButton" class="secondary" type="button">Export local data backup</button>
+      <p id="legacyBackupStatus" class="pin-note" role="status" aria-live="polite"></p>
+    </details>
+    <p id="workerAuthError" class="pin-error" role="alert" aria-live="assertive"></p>
+    <p class="pin-note">Your admin assigns the swipe accounts and manages their profiles and schedules. Your confirmations identify the account you selected and are self-reports, not official attendance.</p>
+  </div>
+</div>
+
 <div id="appRoot" style="display:none">
 <div class="shell">
   <div class="appbar">
@@ -84,25 +139,30 @@ details summary{cursor:pointer;font-weight:750}
     <div class="app-actions">
       <button class="smallbtn secondary" id="profilesTopButton" type="button">Profiles</button>
       <button class="smallbtn" id="addTopButton" type="button">+ Add</button>
+      <button class="dashboard-menu-toggle" id="securityTopButton" type="button" aria-label="Open dashboard menu" aria-expanded="false" aria-controls="dashboardMenu" style="display:none">☰</button>
+      <button class="smallbtn secondary" id="workerSignOutButton" type="button" style="display:none">Sign out</button>
     </div>
   </div>
 
+  <div id="appMessage" class="notice app-message hidden" role="status" aria-live="polite"></div>
+
   <section class="panel" id="profilePicker">
-    <h2>Choose your profile</h2>
-    <p>Select your account to open its shift dashboard. Each profile has separate settings, schedules, and confirmations stored on this device.</p>
+    <h2>Choose a swipe account</h2>
+    <p id="profilePickerHelp">The owner/admin assigns swipe accounts to each operator. Choose an assigned account to view its saved schedule and record a self-confirmation.</p>
     <div class="profile-list" id="profileList"></div>
     <div class="btnrow" style="margin-top:10px">
       <button id="addProfileButton" type="button">+ Add profile</button>
       <button id="backupButton" class="secondary" type="button">Backup / Restore</button>
     </div>
+    <div id="profilePickerRoleNotice" class="notice"><strong>Worker?</strong> Open Backup / Restore and choose “Import worker profile package”, then select the profile supplied by your admin. <strong>Owner/admin?</strong> Create or edit the worker profile here, then export it from Backup / Restore.</div>
     <div class="notice">This is a local shift dashboard. It does not sign in to Ogram or submit attendance.</div>
   </section>
 
   <section class="panel hidden" id="profileEditor">
     <h2 id="editorTitle">Add profile</h2>
     <div class="fieldgrid">
-      <div class="field"><label for="pName">Full name *</label><input id="pName" required maxlength="100" placeholder="Worker name"></div>
-      <div class="field"><label for="pEmail">Account email</label><input id="pEmail" maxlength="150" type="email" placeholder="worker@example.com"></div>
+      <div class="field"><label for="pName">Full name *</label><input id="pName" required maxlength="100" autocomplete="name" placeholder="Worker name"></div>
+      <div class="field"><label for="pEmail">Account email</label><input id="pEmail" maxlength="150" type="email" autocomplete="email" placeholder="worker@example.com"></div>
       <div class="field"><label for="pProfileId">Profile ID</label><input id="pProfileId" maxlength="80" placeholder="Ogram profile ID"></div>
       <div class="field"><label for="pSwipeId">Swipe ID</label><input id="pSwipeId" maxlength="80" placeholder="Swipe ID"></div>
       <div class="field"><label for="pJob">Job title</label><input id="pJob" maxlength="100" placeholder="Warehouse Operator"></div>
@@ -115,10 +175,12 @@ details summary{cursor:pointer;font-weight:750}
       <div class="field"><label for="pShiftZone">Schedule time zone</label><select id="pShiftZone"><option value="Asia/Dubai">Dubai</option><option value="Africa/Kampala">Uganda</option><option value="Europe/Rome">Italy / Europe</option></select></div>
     </div>
     <div class="field">
-      <label>Shift schedules (one per line: YYYY-MM-DD,HH:MM,HH:MM)</label>
-      <textarea id="pSchedules" placeholder="2026-10-23,06:00,16:00&#10;2026-10-24,06:00,16:00"></textarea>
+      <label for="pSchedules">Shift schedules (one per line: YYYY-MM-DD,HH:MM,HH:MM)</label>
+      <textarea id="pSchedules" spellcheck="false" placeholder="2026-10-23,06:00,16:00&#10;2026-10-24,22:00,06:00"></textarea>
     </div>
-    <div class="notice">Use the schedule time zone above for all shift times. Example: 2026-10-23,06:00,16:00. Leave dates blank if unknown; the app will not invent a shift.</div>
+    <div class="notice">Schedule times use the schedule time zone above. If the end time is earlier than the start time, the shift is treated as ending the next day (overnight). No shift is invented for dates not listed here.</div>
+    <div class="notice"><strong>Owner/admin setup:</strong> enter the worker's Swipe ID and confirmed shifts before exporting the worker profile package. The worker should not invent these values.</div>
+    <p id="editorError" class="form-error" role="alert"></p>
     <div class="btnrow">
       <button id="saveProfileButton" type="button">Save profile</button>
       <button id="cancelEditorButton" class="secondary" type="button">Cancel</button>
@@ -126,15 +188,41 @@ details summary{cursor:pointer;font-weight:750}
   </section>
 
   <section class="panel hidden" id="backupPanel">
-    <h2>Backup and restore</h2>
-    <p>Export all worker profiles, schedules, time-zone settings and local self-confirmations to a JSON backup. Keep it private.</p>
+    <h2>Worker handoff, backup and restore</h2>
+    <h3>Export or import one worker profile</h3>
+    <p>Owner/admin: select a completed worker profile and export a shareable setup package containing that worker's details, Swipe ID and saved shifts. Worker: import the package supplied by your admin. Import adds the worker profile and keeps every profile and local self-confirmation already on this phone.</p>
+    <div class="fieldgrid">
+      <div class="field"><label for="profileExportSelect">Worker profile to export</label><select id="profileExportSelect"></select></div>
+    </div>
     <div class="btnrow">
-      <button id="exportBackupButton" type="button">Export backup</button>
-      <button id="importBackupButton" class="secondary" type="button">Restore backup</button>
+      <button id="exportWorkerProfileButton" type="button">Export selected worker profile</button>
+      <button id="importWorkerProfileButton" class="secondary" type="button">Import worker profile package</button>
+      <input id="workerProfileFileInput" type="file" accept=".json,application/json" class="hidden">
+    </div>
+    <p class="note">Worker packages contain the worker's details, Swipe ID and saved shifts, but never local confirmation history or PIN material. Share a package only with that worker. A duplicate worker profile is rejected without changing anything.</p>
+
+    <h3>Full device backup</h3>
+    <p>Export every worker profile, saved schedule, time-zone setting and local self-confirmation to one JSON file. The PIN hash is never included.</p>
+    <div class="btnrow">
+      <button id="exportBackupButton" type="button">Export full device backup</button>
+      <button id="importBackupButton" class="secondary" type="button">Restore full backup</button>
       <input id="backupFileInput" type="file" accept=".json,application/json" class="hidden">
     </div>
-    <div class="notice" id="backupStatus" role="status" aria-live="polite">Backup data stays on this device unless you export it.</div>
+    <p id="backupStatus" class="notice" role="status" aria-live="polite">Backups stay on this device unless you choose a share destination.</p>
+    <div class="notice" style="background:#fef3f2;color:#b42318"><strong>Full restore replaces every profile and all local confirmation history on this phone.</strong> It is not the same as importing one worker profile. Export the current full backup before restoring another.</div>
     <button id="backFromBackupButton" class="secondary" type="button">Back to profiles</button>
+  </section>
+
+  <section class="panel hidden" id="securityPanel">
+    <h2>Security &amp; quick unlock</h2>
+    <p>Biometric unlock is optional and is saved only on this device. On supported Android versions, the system may offer your phone's PIN or pattern as a fallback. Google sign-in is still required for your worker account.</p>
+    <label class="security-toggle" for="biometricUnlockToggle">
+      <span><strong>Use biometric unlock</strong><small>Use the phone's available biometrics; your app PIN stays as a fallback.</small></span>
+      <input id="biometricUnlockToggle" type="checkbox" disabled>
+    </label>
+    <p id="biometricUnlockStatus" class="note" role="status" aria-live="polite">Checking this device…</p>
+    <p class="note">Your app PIN remains available as a fallback. This app lock does not encrypt the local database.</p>
+    <button id="backFromSecurityButton" class="secondary" type="button">Back to dashboard</button>
   </section>
 
   <section class="panel hidden" id="activeProfilePanel">
@@ -149,104 +237,112 @@ details summary{cursor:pointer;font-weight:750}
   <section class="panel" id="storagePanel">
     <h2>Device storage</h2>
     <p id="storageStatus">Checking local storage…</p>
-    <p>Data is saved separately by profile in this browser/app installation. Clearing browser storage or uninstalling the app may erase it. Export backups regularly.</p>
+    <p>Profile data is saved separately by profile. Clearing app data or uninstalling the app may erase it, so export backups regularly. The PIN screen is not database encryption.</p>
   </section>
   <div class="footer">Local dashboard only · Not connected to Ogram</div>
 </div>
+</div>
 
 <template id="dashboardTemplate">
-
 <header class="hero">
-<div class="eyebrow">Ogram · Live shift dashboard</div>
-<h1>Andrew Wamani</h1>
-<p>Warehouse Operator · Transcorp International Logistics</p>
-<p>Profile ID: <strong>ID432384</strong> · Swipe ID shown in attendance screen: <strong>ID55911</strong></p>
-<div class="pill">Contract: 15 Oct – 15 Dec 2026</div>
+  <div class="eyebrow">Local · On-device shift dashboard</div>
+  <h1 id="dashName"></h1>
+  <p><span id="dashJob"></span><span id="dashCompany"></span></p>
+  <p>Profile ID: <strong id="dashProfileId"></strong> · Swipe ID: <strong id="dashSwipeId"></strong></p>
+  <nav id="dashboardMenu" class="dashboard-menu hidden" aria-label="Dashboard sections">
+    <button type="button" data-dashboard-view="home" aria-current="page">Dashboard</button>
+    <button type="button" data-dashboard-view="schedule">Schedule</button>
+    <button type="button" data-dashboard-view="account">Account details</button>
+    <button type="button" data-dashboard-view="contract">Contract</button>
+    <button type="button" data-dashboard-view="settings">Settings</button>
+    <button type="button" data-dashboard-security>Security</button>
+  </nav>
 </header>
 
+<section class="dashboard-page" data-dashboard-page="home">
 <section class="card">
-<h2>Choose your dashboard time zone</h2>
-<p class="note" style="margin-top:0">Choose how times are displayed. Shift times are based on the Dubai schedule and converted to your selected time zone. The three clocks below will still show all locations.</p>
-<label for="primaryTimezone" style="display:block;font-size:13px;font-weight:700;margin:10px 0 5px">Dashboard / swipe time zone</label>
-<select id="primaryTimezone" class="timezone-select">
-<option value="Asia/Dubai">🇦🇪 Dubai (UTC+4)</option>
-<option value="Africa/Kampala">🇺🇬 Uganda (UTC+3)</option>
-<option value="Europe/Rome">🇮🇹 Italy / Europe (seasonal time)</option>
-</select>
-<div class="pill" id="timezoneSelected" style="background:#eef0ff;color:#4559d8;border-color:#d9ddff">Dashboard uses Dubai time</div>
-</section>
-
-<section class="card">
-<h2>Live contract countdown</h2>
-<div class="grid">
-<div class="metric"><h3>Days remaining</h3><div class="value" id="daysRemaining">—</div><div class="small" id="contractStatus">Calculating…</div></div>
-<div class="metric"><h3>Contract progress</h3><div class="value" id="progress">—</div><div class="small">Elapsed portion</div></div>
-</div>
-<p class="note" id="contractDates"></p>
-</section>
-
-<section class="card">
-<h2>Current local time</h2>
-<div class="zone"><div><div class="place">🇺🇬 Uganda</div><div class="offset">Africa/Kampala · UTC+3</div></div><div class="zoneclock" id="clockUganda">--:--:--</div></div>
-<div class="zone"><div><div class="place">🇦🇪 Dubai</div><div class="offset">Asia/Dubai · UTC+4</div></div><div class="zoneclock" id="clockDubai">--:--:--</div></div>
-<div class="zone"><div><div class="place">🇮🇹 Italy / Europe</div><div class="offset">Europe/Rome · seasonal time</div></div><div class="zoneclock" id="clockItaly">--:--:--</div></div>
-<p class="note">Clocks use each location’s time-zone database, so Italy’s daylight-saving changes are handled automatically.</p>
-</section>
-
-<section class="card">
-<h2>Shift status · selected contract date</h2>
-<div class="grid">
-<div class="metric"><h3 id="shiftHoursTitle">Shift hours (Dubai)</h3><div class="value">06:00–16:00</div><div class="small">As shown in schedule</div></div>
-<div class="metric"><h3>Shift countdown</h3><div class="value" id="shiftCountdown">—</div><div class="small" id="shiftStatus">Calculating…</div></div>
-</div>
-<p class="note">The screenshots show 06:00 AM–04:00 PM Dubai time for Oct 15–19 and Oct 22 only. These times are converted when you change the display time zone. For other dates, verify the shift in Ogram.</p>
-</section>
-
-<section class="card">
-<h2>Daily schedule from screenshots</h2>
-<div class="schedule">
-<div class="day"><div><strong>15–19 Oct 2026</strong>Thu–Mon</div><span>06:00 AM – 04:00 PM</span></div>
-<div class="day"><div><strong>22 Oct 2026</strong>Thu · attendance screen</div><span>06:00 AM – 04:00 PM</span></div>
-</div>
-<label for="shiftDate" style="display:block;font-size:13px;font-weight:700;margin:15px 0 7px">Check a contract date</label>
-<input id="shiftDate" type="date" min="2026-10-15" max="2026-12-15" value="2026-10-22" style="width:100%;padding:12px;border:1px solid #d9e0ea;border-radius:10px;font:inherit">
-<p class="note" id="selectedDateNote">Select a date to see the schedule when it is confirmed by the screenshots. Other dates require verification in Ogram.</p>
-</section>
-
-<section class="card">
-<h2>Account details</h2>
-<div class="rows">
-<div class="rowitem"><span class="k">Account email</span><span class="v">wamaniandrew26@gmail.com</span></div>
-<div class="rowitem"><span class="k">Name</span><span class="v">Andrew Wamani</span></div>
-<div class="rowitem"><span class="k">Profile ID</span><span class="v">ID432384</span></div>
-<div class="rowitem"><span class="k">Job</span><span class="v">Warehouse Operator</span></div>
-<div class="rowitem"><span class="k">Company</span><span class="v">Transcorp International Logistics</span></div>
-<div class="rowitem"><span class="k">Work location</span><span class="v">UAEW Warehouse – DIP 2</span></div>
-</div>
-</section>
-
-<section class="card">
-<h2>Copyable work address</h2>
-<div class="address" id="address">Dubai Festival City Mall - Crescent Rd - Dubai</div>
-<button id="copyAddress" type="button">Copy address</button><div id="copyStatus" role="status" aria-live="polite"></div>
-<p class="note">If copying is blocked, open the installed dashboard or open this page in Chrome on Android and press and hold the address to select and copy it.</p>
-<div class="confirmation" id="endShiftConfirmation" aria-live="polite">
-  <h3>Have you finished your shift?</h3>
-  <p>Only swipe if you have actually finished work. This records your confirmation in this HTML page only; it does not submit attendance to Ogram.</p>
-  <div class="swipe-track" id="swipeTrack" role="group" aria-label="Swipe to confirm shift finished">
-    <span class="swipe-label" id="swipeLabel">Swipe to confirm finished</span>
-    <span class="swipe-knob" id="swipeKnob" aria-hidden="true">›</span>
+  <h2>Shift status</h2>
+  <div class="grid">
+    <div class="metric"><h3 id="shiftHoursTitle">Shift hours</h3><div class="value" id="shiftHoursValue">—</div><div class="small" id="shiftHoursSource">Saved schedule only</div></div>
+    <div class="metric"><h3>Shift countdown</h3><div class="value" id="shiftCountdown">—</div><div class="small" id="shiftStatus">Select a date</div></div>
   </div>
-  <div class="confirm-status" id="endShiftStatus" role="status"></div>
-</div>
+  <p class="note" id="selectedDateNote">Only dates with a saved shift are shown. Check Ogram for official attendance and schedule changes.</p>
+  <div class="confirmation show" id="endShiftConfirmation" aria-live="polite">
+    <h3>Have you finished your shift?</h3>
+    <p>This records your self-confirmation for the selected shift. It does not submit attendance to Ogram or change any Ogram record.</p>
+    <div class="swipe-track" id="swipeTrack" role="group" aria-label="Swipe to confirm shift finished">
+      <span class="swipe-label" id="swipeLabel">Swipe to confirm finished</span>
+      <span class="swipe-knob" id="swipeKnob" aria-hidden="true">›</span>
+    </div>
+    <div class="confirm-status" id="endShiftStatus" role="status" aria-live="polite"></div>
+  </div>
+  <button type="button" class="secondary page-link" data-open-dashboard-view="schedule">Choose a shift date</button>
 </section>
 
+<section class="card">
+  <h2>Work address</h2>
+  <div class="address" id="address"></div>
+  <button id="copyAddress" type="button">Copy address</button><div id="copyStatus" role="status" aria-live="polite"></div>
+  <p class="note">If copying is blocked, press and hold the address text to select and copy it.</p>
+</section>
+</section>
 
+<section class="dashboard-page hidden" data-dashboard-page="schedule">
+<section class="card">
+  <h2>Next shift</h2>
+  <div id="nextSchedule" class="schedule"></div>
+  <label for="shiftDate" style="display:block;font-size:13px;font-weight:700;margin:15px 0 7px">Choose one date to view or confirm</label>
+  <input id="shiftDate" type="date" style="width:100%;padding:12px;border:1px solid #d9e0ea;border-radius:10px;font:inherit">
+  <details id="allScheduleDetails" class="all-schedule"><summary id="allScheduleSummary">View all saved shifts</summary><div class="schedule" id="savedSchedule"></div></details>
+  <p class="note">The next shift and countdown update automatically. Selecting a date switches to that single saved shift.</p>
+</section>
+</section>
 
+<section class="dashboard-page hidden" data-dashboard-page="account">
+<section class="card">
+  <h2>Account details</h2>
+  <div class="rows">
+    <div class="rowitem"><span class="k">Account email</span><span class="v" id="accountEmail"></span></div>
+    <div class="rowitem"><span class="k">Name</span><span class="v" id="accountName"></span></div>
+    <div class="rowitem"><span class="k">Profile ID</span><span class="v" id="accountProfileId"></span></div>
+    <div class="rowitem"><span class="k">Job</span><span class="v" id="accountJob"></span></div>
+    <div class="rowitem"><span class="k">Company</span><span class="v" id="accountCompany"></span></div>
+    <div class="rowitem"><span class="k">Work location</span><span class="v" id="accountLocation"></span></div>
+  </div>
+</section>
+</section>
 
+<section class="dashboard-page hidden" data-dashboard-page="contract">
+<section class="card">
+  <h2>Contract dates and progress</h2>
+  <div class="grid">
+    <div class="metric"><h3>Days remaining</h3><div class="value" id="daysRemaining">—</div><div class="small" id="contractStatus">Not set</div></div>
+    <div class="metric"><h3>Contract progress</h3><div class="value" id="progress">—</div><div class="small">Elapsed portion</div></div>
+  </div>
+  <p class="note" id="contractDates"></p>
+</section>
+</section>
+
+<section class="dashboard-page hidden" data-dashboard-page="settings">
+<section class="card">
+  <h2>Dashboard time zone</h2>
+  <p class="note" style="margin-top:0">This changes how saved shift times are displayed. The schedule itself uses the assigned schedule time zone.</p>
+  <label for="primaryTimezone" style="display:block;font-size:13px;font-weight:700;margin:10px 0 5px">Display time zone</label>
+  <select id="primaryTimezone" class="timezone-select">
+    <option value="Asia/Dubai">Dubai (UTC+4)</option>
+    <option value="Africa/Kampala">Uganda (UTC+3)</option>
+    <option value="Europe/Rome">Italy / Europe (seasonal time)</option>
+  </select>
+  <div class="pill" id="timezoneSelected" style="background:#eef0ff;color:#4559d8;border-color:#d9ddff"></div>
+</section>
+<section class="card">
+  <h2>Current local times</h2>
+  <div class="zone"><div><div class="place">Uganda</div><div class="offset">Africa/Kampala · UTC+3</div></div><div class="zoneclock" id="clockUganda">--:--:--</div></div>
+  <div class="zone"><div><div class="place">Dubai</div><div class="offset">Asia/Dubai · UTC+4</div></div><div class="zoneclock" id="clockDubai">--:--:--</div></div>
+  <div class="zone"><div><div class="place">Italy / Europe</div><div class="offset">Europe/Rome · seasonal time</div></div><div class="zoneclock" id="clockItaly">--:--:--</div></div>
+  <p class="note">Clocks use the time-zone database, so Italy's daylight-saving changes are handled automatically.</p>
+</section>
+</section>
 </template>
-
-
-</div>
 </body>
 </html>

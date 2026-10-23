@@ -1,0 +1,16 @@
+.import-preview {
+  grid-column: 1 / -1;
+  padding: 12px 14px;
+  border: 1px solid #cde7d5;
+  border-radius: 10px;
+  background: #f0faf3;
+  color: #17633d;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.import-preview.error {
+  border-color: #f2c9c5;
+  background: #fef3f2;
+  color: #b42318;
+}
