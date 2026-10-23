@@ -253,6 +253,30 @@ test('worker profile import is additive and keeps existing profiles and confirma
   );
 });
 
+test('remote schedule rows use the admin profile time zone over stale row zones', async () => {
+  const storage = new MemoryStorage();
+  const store = makeStore(storage);
+  await store.load();
+  const profile = await store.syncRemoteWorker({
+    id: 'remote-worker-time-zone',
+    name: 'Remote Worker',
+    schedule_timezone: 'Asia/Dubai',
+    display_timezone: 'Asia/Dubai',
+    source_local_id: 'local-worker-time-zone'
+  }, [{
+    id: 'shift-row-time-zone',
+    worker_id: 'remote-worker-time-zone',
+    shift_date: '2026-10-24',
+    start_time: '05:00',
+    end_time: '17:00',
+    schedule_timezone: 'Europe/Rome'
+  }]);
+
+  assert.equal(profile.scheduleZone, 'Asia/Dubai');
+  assert.equal(profile.schedules['2026-10-24'].scheduleZone, 'Asia/Dubai');
+  assert.equal(profile.schedules['2026-10-24'].start, '05:00');
+});
+
 test('a failed worker import write leaves existing profiles unchanged', async () => {
   const storage = new MemoryStorage();
   const store = makeStore(storage);

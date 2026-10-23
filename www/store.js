@@ -478,6 +478,9 @@ export class ProfileStore {
         ...(existingRemote?.confirmations || {})
       };
       const now = this.now();
+      // The admin's profile-level schedule time zone is authoritative. Older
+      // imported shift rows may carry a stale per-row zone (for example Italy)
+      // even after the admin has set the profile to Dubai.
       const scheduleZone = worker.schedule_timezone || dailyRule?.schedule_timezone || 'Asia/Dubai';
       const schedules = {};
       if (dailyRule) {
@@ -496,7 +499,7 @@ export class ProfileStore {
             schedules[date] = {
               start: String(dailyRule.start_time || '').slice(0, 5),
               end: String(dailyRule.end_time || '').slice(0, 5),
-              scheduleZone: dailyRule.schedule_timezone || scheduleZone
+              scheduleZone
             };
           }
         }
@@ -508,7 +511,7 @@ export class ProfileStore {
           schedules[row.shift_date] = {
             start: String(row.start_time || '').slice(0, 5),
             end: String(row.end_time || '').slice(0, 5),
-            scheduleZone: row.schedule_timezone || scheduleZone
+            scheduleZone
           };
         }
       }

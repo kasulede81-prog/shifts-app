@@ -263,6 +263,20 @@ test('worker profile package omits confirmations and PIN material', () => {
   assert.deepEqual(parsed.profile.confirmations, {});
 });
 
+test('imported worker packages default schedule and display time to Dubai', () => {
+  const source = profile({
+    id: 'worker_package_italy_zone',
+    displayZone: 'Europe/Rome',
+    scheduleZone: 'Europe/Rome'
+  });
+  source.schedules['2026-10-22'].scheduleZone = 'Europe/Rome';
+  const workerPackage = createWorkerProfilePackage(source, NOW);
+  const parsed = parseWorkerProfilePackageText(JSON.stringify(workerPackage), NOW);
+  assert.equal(parsed.profile.displayZone, 'Asia/Dubai');
+  assert.equal(parsed.profile.scheduleZone, 'Asia/Dubai');
+  assert.equal(parsed.profile.schedules['2026-10-22'].scheduleZone, 'Asia/Dubai');
+});
+
 test('worker profile package validation rejects malformed data and confirmation history', () => {
   const valid = createWorkerProfilePackage(profile({ id: 'worker_package_two' }), NOW);
   const withConfirmations = structuredClone(valid);

@@ -398,7 +398,16 @@ export function parseWorkerProfilePackageText(text, now = new Date()) {
   if (unexpectedProfile.length) {
     throw new ValidationError(`Worker profile contains unsupported field "${unexpectedProfile[0]}".`);
   }
-  const profile = normalizeProfile(data.profile, { now });
+  const importedSchedules = normalizeSchedules(data.profile.schedules);
+  const profile = normalizeProfile({
+    ...data.profile,
+    displayZone: TZ.dubai,
+    scheduleZone: TZ.dubai,
+    schedules: Object.fromEntries(Object.entries(importedSchedules).map(([date, schedule]) => [date, {
+      ...schedule,
+      scheduleZone: TZ.dubai
+    }]))
+  }, { now });
   // Never import confirmation history, even if a future package shape tries to
   // carry it alongside an otherwise valid profile.
   profile.confirmations = {};
