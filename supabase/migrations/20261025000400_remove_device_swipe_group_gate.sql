@@ -3,10 +3,10 @@
 -- Preserve device/group tables and their existing rows for historical recovery.
 begin;
 
-update public.shift_swipers
-set device_assignment_enabled = false
-where device_assignment_enabled;
-
+-- Do not update shift_swipers here: its audit trigger writes auth.uid() to
+-- updated_by, which is NULL when this migration is run from SQL Editor. The
+-- predicate below no longer reads this legacy flag, and the toggle RPC is
+-- removed, so any existing value is inert and cannot block account access.
 revoke update (device_assignment_enabled) on public.shift_swipers from authenticated;
 
 drop function if exists public.shift_set_swiper_device_assignment(uuid, boolean);
