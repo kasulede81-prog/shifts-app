@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "admin:dev": "vite --config vite.admin.config.js",
-    "admin:build": "vite build --config vite.admin.config.js",
+    "admin:build": "vite build --config vite.admin.config.js && vite build --config vite.worker.web.config.js",
     "build": "vite build && vite build --config vite.admin.android.config.js",
     "test": "node --test",
     "test:browser": "npm run build && node scripts/browser-smoke.mjs",

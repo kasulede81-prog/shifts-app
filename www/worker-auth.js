@@ -95,7 +95,7 @@ export async function signInWithGoogle() {
   if (!shiftSupabase) throw new Error('Shift sign-in is not configured on this build.');
   const redirectTo = Capacitor.isNativePlatform()
     ? SHIFT_AUTH_REDIRECT
-    : `${window.location.origin}${window.location.pathname}`;
+    : `${window.location.origin}/`;
   const { data, error } = await shiftSupabase.auth.signInWithOAuth({
     provider: 'google',
     options: {

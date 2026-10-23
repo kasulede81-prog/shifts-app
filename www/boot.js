@@ -258,13 +258,23 @@ async function startDashboard() {
   try {
     const session = await getShiftSession();
     if (!session) {
+      if (!Capacitor.isNativePlatform() && window.location.pathname.startsWith('/worker/')) {
+        window.location.replace(new URL('/', window.location.origin).href);
+        return;
+      }
       showWorkerGate('Sign in with the Google account your DKASU admin registered.');
       return;
     }
 
-    if (Capacitor.isNativePlatform() && await isShiftAdminUser(session.user.id)) {
-      window.location.replace(new URL('/admin/', window.location.origin).href);
-      return;
+    if (await isShiftAdminUser(session.user.id)) {
+      if (Capacitor.isNativePlatform()) {
+        window.location.replace(new URL('/admin/', window.location.origin).href);
+        return;
+      }
+      if (window.location.pathname.startsWith('/worker/')) {
+        window.location.replace(new URL('/', window.location.origin).href);
+        return;
+      }
     }
 
     let workerContext = null;
@@ -332,6 +342,10 @@ async function startDashboard() {
           appStarted = false;
           if (appRoot) appRoot.style.display = 'none';
           workerRegistrationMode = false;
+          if (!Capacitor.isNativePlatform()) {
+            window.location.replace(new URL('/', window.location.origin).href);
+            return;
+          }
           showWorkerGate('You are signed out. Sign in with your DKASU Google account to continue.');
         } catch (error) {
           showWorkerGate(`Sign-out could not finish. ${error?.message || error}`);

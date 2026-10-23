@@ -641,7 +641,7 @@ async function renderSession(user) {
         window.location.replace(new URL('/', window.location.origin).href);
         return;
       }
-      notAdminPanel.classList.remove('hidden');
+      window.location.replace(new URL('/worker/', window.location.origin).href);
       return;
     }
     companyId = await getCompanyId();
@@ -695,7 +695,7 @@ async function start() {
     const button = event.currentTarget;
     setBusy(button, true, 'Opening Google…');
     try {
-      const redirectTo = `${window.location.origin}${window.location.pathname}`;
+      const redirectTo = `${window.location.origin}/`;
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: { redirectTo, queryParams: { prompt: 'select_account' } }

@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#182a45">
-  <meta name="description" content="DKASU shift administration">
-  <title>DKASU OS · Shift Admin</title>
+  <meta name="description" content="Sign in to your DKASU shift dashboard">
+  <title>DKASU OS · Shift Dashboard</title>
   <link rel="stylesheet" href="./app.css">
   <link rel="stylesheet" href="./import.css">
   <script type="module" src="./app.js"></script>
@@ -13,7 +13,7 @@
 <body>
   <main class="page">
     <header class="topbar">
-      <a class="brand" href="/" aria-label="DKASU OS Shift Admin"><img src="./dkasu-logo.png" alt="DKASU"><span>SHIFT ADMIN</span></a>
+      <a class="brand" href="/" aria-label="DKASU OS Shift Dashboard"><img src="./dkasu-logo.png" alt="DKASU"><span>SHIFT DASHBOARD</span></a>
       <div id="accountBar" class="account-bar hidden">
         <span id="accountEmail"></span>
         <button id="signOutButton" class="button quiet" type="button">Sign out</button>
@@ -23,17 +23,17 @@
     <div id="notice" class="notice hidden" role="status" aria-live="polite"></div>
 
     <section id="loginPanel" class="card login-card">
-      <p class="eyebrow">DKASU · TEAM SCHEDULES</p>
-      <h1>Shift administration</h1>
-      <p class="muted">Sign in with the Google account authorized to manage DKASU worker profiles and schedules.</p>
+      <p class="eyebrow">DKASU · SHIFT DASHBOARD</p>
+      <h1>Sign in to DKASU Shift</h1>
+      <p class="muted">Continue with Google. Your account will open its assigned dashboard.</p>
       <button id="googleButton" class="button primary wide" type="button">Continue with Google</button>
       <p id="configHelp" class="muted small hidden">Add the public Supabase URL and anon key to the local environment to enable sign-in.</p>
     </section>
 
     <section id="notAdminPanel" class="card hidden">
       <p class="eyebrow">ACCOUNT CHECK</p>
-      <h1>Admin access is not set up</h1>
-      <p class="muted">You signed in successfully, but this Google account is not listed as a DKASU shift admin. An authorized project owner must add it to the shift admin list.</p>
+      <h1>Shift access is not set up</h1>
+      <p class="muted">This Google account is not registered as a DKASU admin or swiper yet. Ask your DKASU admin for access, then sign in again.</p>
     </section>
 
     <section id="adminPanel" class="hidden">
